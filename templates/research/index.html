@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Tracker | ITRACK</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&family=Sarabun:wght@300;400;500;600&display=swap');
+        
+        html, body { 
+            height: 100%; 
+            font-family: 'Prompt', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b;
+            line-height: 1.6; 
+        }
+        
+        .summary-card { min-height: 110px; transition: transform 0.2s; border: none; border-radius: 16px; background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .summary-card:hover { transform: translateY(-5px); }
+        .summary-card h3 { font-weight: 600; letter-spacing: -0.5px; }
+        
+        .upload-container { border: 2px dashed #cbd5e1; border-radius: 15px; padding: 2rem; text-align: center; background: #ffffff; transition: all 0.3s ease; cursor: pointer; }
+        .upload-container:hover { border-color: #3b82f6; background: #eff6ff; }
+        
+        .loader-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.95); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: .3s; }
+        .loader-overlay.hide { opacity: 0; pointer-events: none; }
+
+        .mapping-card { background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; }
+        .mapping-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; transition: all 0.2s; }
+        .mapping-item:hover { border-color: #3b82f6; background: #ffffff; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        
+        .field-label { font-size: 0.95rem; font-weight: 600; color: #0f172a; margin-bottom: 2px; }
+        .field-hint { font-family: 'Sarabun', sans-serif; font-size: 0.85rem; color: #64748b; font-weight: 400; }
+        .form-select { font-family: 'Sarabun', sans-serif; font-size: 0.9rem; font-weight: 500; border-radius: 8px; }
+
+        .field-icon { width: 44px; height: 44px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #3b82f6; font-size: 1rem; font-weight: 600; }
+        .step-badge { background: #3b82f6; color: white; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; margin-right: 12px; }
+        
+        .navbar-brand { letter-spacing: 1px; font-weight: 600; }
+        .table { font-family: 'Sarabun', sans-serif; font-size: 0.85rem; }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <div id="page-loader" class="loader-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+            <div class="mt-3 fw-bold text-secondary" style="font-size: 1.1rem;">กำลังจัดเตรียมข้อมูล...</div>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-3">
+        <div class="container">
+            <a class="navbar-brand fs-4" href="{{ url_for('research.landing') }}">ITRACK</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <span class="text-white-50 me-3 small">
+                            <i class="bi bi-person-circle me-1"></i> {{ current_user.username }}
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('research.dashboard') }}">
+                            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger fw-bold" href="{{ url_for('auth.logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="row g-3 mb-4">
+            {% for title, val, color in [
+                ('Total Projects', total, 'dark'),
+                ('On Track', on_track, 'success'),
+                ('Near Deadline', near_deadline, 'warning'),
+                ('Overdue', overdue, 'danger'),
+                ('Next Deadline', (next_deadline ~ ' วัน') if next_deadline is not none else '-', 'info')
+            ] %}
+            <div class="col-md">
+                <div class="card text-center summary-card border-top border-4 border-{{ color }}">
+                    <div class="card-body p-3">
+                        <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ title }}</div>
+                        <h3 class="mt-2 mb-0">{{ val }}</h3>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4 border-0" style="border-radius: 16px;">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-4 text-dark"><span class="step-badge">1</span>นำเข้าไฟล์ข้อมูล</h6>
+                        <form action="{{ url_for('research.upload') }}" method="POST" enctype="multipart/form-data">
+                            <div class="upload-container mb-3" onclick="document.getElementById('fileInput').click();">
+                                <i class="bi bi-file-earmark-arrow-up text-muted fs-1"></i>
+                                <div class="small fw-medium mt-3" id="uploadText" style="color: #64748b;">เลือกไฟล์ Excel หรือ CSV</div>
+                                <input id="fileInput" class="form-control d-none" type="file" name="file" accept=".xlsx, .xls, .csv" required>
+                            </div>
+                            <button class="btn btn-primary w-100 py-2 fw-bold shadow-sm">อัปโหลดไฟล์</button>
+                        </form>
+                    </div>
+                </div>
+
+                {% if sheets %}
+                <div class="card shadow-sm mb-4 border-0 bg-white" style="border-radius: 16px;">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-4 text-dark"><span class="step-badge">2</span>เลือกชื่อชีต (Sheet)</h6>
+                        <form action="{{ url_for('research.preview_sheet') }}" method="POST">
+                            <div class="mb-3">
+                                <select class="form-select" name="sheet" required>
+                                    <option value="">-- ระบุชื่อชีตที่ต้องการ --</option>
+                                    {% for s in sheets %}
+                                        <option value="{{ s }}">{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button class="btn btn-outline-primary w-100 fw-bold">ดึงข้อมูลพรีวิว</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-8">
+                {% if columns %}
+                <div class="card shadow-sm mb-4 border-0 overflow-hidden" style="border-radius: 16px;">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold text-secondary" style="font-size: 0.95rem;"><i class="bi bi-eye me-2"></i>ตรวจสอบตัวอย่างข้อมูล</h6>
+                        <span class="badge bg-primary rounded-pill px-3 py-2" style="font-weight: 500;">{{ active_sheet }}</span>
+                    </div>
+                    <div class="table-responsive" style="max-height:220px">
+                        <table class="table table-hover table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>{% for c in columns %}<th class="px-3 py-2 fw-bold" style="color: #475569;">{{ c }}</th>{% endfor %}</tr>
+                            </thead>
+                            <tbody>
+                                {% for r in rows %}
+                                <tr>{% for cell in r %}<td class="px-3 py-2 text-muted">{{ cell }}</td>{% endfor %}</tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-5 border-0 mapping-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0 text-primary"><span class="step-badge">3</span>Column Mapping</h5>
+                            <span class="text-muted" style="font-size: 0.85rem;">จับคู่หัวตารางให้ตรงกับระบบฐานข้อมูล</span>
+                        </div>
+                        
+                        <form action="{{ url_for('research.map_columns') }}" method="POST">
+                            <div class="row g-3">
+                                {% for f, l, icon, hint in [
+                                    ('project_th', 'ชื่อโครงการ (ภาษาไทย)', 'กขค', 'ระบุชื่อหลักที่เป็นภาษาไทยของงานวิจัย'),
+                                    ('project_en', 'ชื่อโครงการ (English)', 'abc', 'ระบุชื่อแปลภาษาอังกฤษ (ถ้ามี)'),
+                                    ('researcher_name', 'ชื่อผู้วิจัย/ผู้รับผิดชอบ', 'bi-person-vcard', 'ชื่อหัวหน้าโครงการหรือคณะผู้จัดทำ'),
+                                    
+                                    ('researcher_email', 'อีเมลติดต่อ (สำคัญ)', 'bi-envelope-at', 'ระบุคอลัมน์ที่มีอีเมลสำหรับแจ้งเตือน'),
+
+                                    ('affiliation', 'สังกัด / หน่วยงาน', 'bi-building-gear', 'คณะ สถาบัน หรือกองงานที่สังกัด'),
+                                    ('funding', 'งบประมาณที่ได้รับ (บาท)', 'bi-currency-dollar', 'ระบุยอดเงินทุนสนับสนุนงานวิจัย'),
+                                    ('deadline', 'วันสิ้นสุดโครงการ / กำหนดส่ง', 'bi-calendar-check', 'วันที่สิ้นสุดหรือวันครบกำหนดส่งรายงาน')
+                                ] %}
+                                <div class="col-md-6">
+                                    <div class="mapping-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="field-icon me-3">
+                                                {% if icon in ['กขค', 'abc'] %}
+                                                    <span style="margin-top: -2px;">{{ icon }}</span>
+                                                {% else %}
+                                                    <i class="bi {{ icon }}"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div style="line-height: 1.2;">
+                                                <div class="field-label">{{ l }}</div>
+                                                <div class="field-hint">{{ hint }}</div>
+                                            </div>
+                                        </div>
+                                        <select class="form-select border-0 shadow-sm bg-white" name="{{ f }}">
+                                            <option value="">-- ละเว้น / ไม่นำเข้าข้อมูลส่วนนี้ --</option>
+                                            {% for c in columns %}
+                                                <option value="{{ c }}">{{ c }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                {% endfor %}
+
+                                <div class="col-12 mt-4 pt-3 border-top">
+                                    <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm py-3" style="font-size: 1.1rem; letter-spacing: 0.5px;">
+                                        <i class="bi bi-database-fill-check me-2"></i>บันทึกและนำเข้าข้อมูลเข้าสู่ระบบ
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5 bg-white shadow-sm border border-2 border-dashed" style="border-radius: 16px;">
+                    <i class="bi bi-layout-text-window-reverse text-muted opacity-25" style="font-size: 5rem;"></i>
+                    <h5 class="text-secondary fw-bold mt-4">พร้อมรับข้อมูลเพื่อประมวลผล</h5>
+                    <p class="text-muted" style="font-size: 0.9rem;">เริ่มจากการอัปโหลดไฟล์ Excel และเลือกชีตที่ต้องการเพื่อเข้าสู่ขั้นตอนถัดไป</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => document.getElementById("page-loader").classList.add("hide");
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => {
+                document.getElementById("page-loader").classList.remove("hide");
+            });
+        });
+        document.getElementById('fileInput').onchange = function() {
+            if (this.files.length > 0) {
+                const container = document.getElementById('uploadText');
+                container.innerHTML = `<span class="text-primary fw-bold" style="font-size: 0.95rem;"><i class="bi bi-check-circle-fill me-1"></i>${this.files[0].name}</span>`;
+            }
+        };
+    </script>
+</body>
+</html>
