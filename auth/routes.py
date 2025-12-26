@@ -11,6 +11,11 @@ def login():
         username = request.form.get('username')
         pw = request.form.get('password')
 
+        # กันค่าว่าง
+        if not username or not pw:
+            flash('กรอกข้อมูลให้ครบ', 'danger')
+            return render_template("auth/login.html")
+
         conn = get_db()
         user_row = conn.execute(
             "SELECT * FROM users WHERE username = ?",
@@ -18,13 +23,24 @@ def login():
         ).fetchone()
         conn.close()
 
-        if user_row and check_password_hash(user_row['password'], pw):
+        if not user_row:
+            flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
+            return render_template("auth/login.html")
+
+        # ป้องกัน type แปลก / None จาก production
+        try:
+            hashed = user_row['password']
+        except Exception:
+            flash('ระบบข้อมูลผู้ใช้ผิดพลาด', 'danger')
+            return render_template("auth/login.html")
+
+        if not isinstance(hashed, str):
+            hashed = str(hashed)
+
+        # ตรวจรหัสผ่านอย่างปลอดภัย
+        if check_password_hash(hashed, pw):
             user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
-            
-            # ✅ Login เข้าไป (Session จะหายเมื่อปิด Browser ตามที่เราตั้งใน app.py)
             login_user(user)
-            
-            # ✅ เด้งไปหน้า Landing (index.html) ตามที่คุณต้องการ
             return redirect(url_for('research.landing'))
 
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
