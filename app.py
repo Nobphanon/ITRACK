@@ -2,7 +2,6 @@ import os
 from flask import Flask
 from flask_login import LoginManager
 from models import init_db, get_db, User
-# ✅ 1. นำเข้า mail จากไฟล์ extensions ที่เราเพิ่งสร้าง
 from extensions import mail 
 
 app = Flask(__name__)
@@ -10,21 +9,15 @@ app.secret_key = os.urandom(24)
 app.config['SESSION_PERMANENT'] = False
 
 # -------------------------------------------------------------------------
-# ✅ 2. เพิ่มการตั้งค่าอีเมล (Gmail Config)
+# ✅ ตั้งค่าอีเมล
 # -------------------------------------------------------------------------
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-
-# ⚠️ แก้ตรงนี้: ใส่อีเมล Gmail ของคุณที่จะใช้เป็นคนส่ง
 app.config['MAIL_USERNAME'] = 'kissmemore248@gmail.com' 
-
-# ⚠️ แก้ตรงนี้: ใส่รหัส App Password 16 หลัก (ไม่ใช่รหัสผ่าน Login ปกติ)
-app.config['MAIL_PASSWORD'] = 'sljj udrk nrec nfgn' 
-
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') 
 app.config['MAIL_DEFAULT_SENDER'] = ('ITRACK Alert', app.config['MAIL_USERNAME'])
 
-# ✅ 3. เริ่มการทำงานของระบบส่งเมล
 mail.init_app(app) 
 # -------------------------------------------------------------------------
 
@@ -47,6 +40,11 @@ from Research.routes import research_bp
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(research_bp)
 
-if __name__ == "__main__":
+# ✅✅✅ จุดสำคัญที่แก้ไข (ห้ามเอาไว้ข้างล่างสุด!)
+# สั่งให้สร้าง Database ทันทีที่ Render เริ่มรันโปรแกรม
+with app.app_context():
     init_db()
+
+# ส่วนนี้ Render จะไม่เข้ามาอ่าน แต่เอาไว้เผื่อรันในเครื่องตัวเอง
+if __name__ == "__main__":
     app.run(debug=True)
