@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required
-from werkzeug.security import check_password_hash
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash, generate_password_hash
 from models import get_db, User
 
 auth_bp = Blueprint('auth', __name__)
+
+# ===================== LOGIN =====================
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -11,7 +13,6 @@ def login():
         username = request.form.get('username')
         pw = request.form.get('password')
 
-        # กันค่าว่าง
         if not username or not pw:
             flash('กรอกข้อมูลให้ครบ', 'danger')
             return render_template("auth/login.html")
@@ -27,17 +28,8 @@ def login():
             flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
             return render_template("auth/login.html")
 
-        # ป้องกัน type แปลก / None จาก production
-        try:
-            hashed = user_row['password']
-        except Exception:
-            flash('ระบบข้อมูลผู้ใช้ผิดพลาด', 'danger')
-            return render_template("auth/login.html")
+        hashed = str(user_row['password'])
 
-        if not isinstance(hashed, str):
-            hashed = str(hashed)
-
-        # ตรวจรหัสผ่านอย่างปลอดภัย
         if check_password_hash(hashed, pw):
             user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
             login_user(user)
@@ -47,8 +39,40 @@ def login():
 
     return render_template("auth/login.html")
 
+# ===================== LOGOUT =====================
+
 @auth_bp.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('auth.login'))
+
+# ===================== CHANGE PASSWORD =====================
+
+@auth_bp.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        old = request.form.get('old_password')
+        new = request.form.get('new_password')
+        confirm = request.form.get('confirm_password')
+
+        if not check_password_hash(current_user.password, old):
+            flash('รหัสผ่านเดิมไม่ถูกต้อง', 'danger')
+            return redirect(url_for('auth.change_password'))
+
+        if new != confirm:
+            flash('รหัสผ่านใหม่ไม่ตรงกัน', 'danger')
+            return redirect(url_for('auth.change_password'))
+
+        hashed = generate_password_hash(new)
+
+        conn = get_db()
+        conn.execute("UPDATE users SET password=? WHERE id=?", (hashed, current_user.id))
+        conn.commit()
+        conn.close()
+
+        flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
+        return redirect(url_for('research.landing'))
+
+    return render_template('auth/change_password.html')
