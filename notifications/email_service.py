@@ -2,24 +2,30 @@ from flask_mail import Message
 from flask import current_app
 from extensions import mail
 import threading
+import traceback
 
-# ฟังก์ชันสำหรับส่งเมลแบบเงียบๆ (Background Thread)
+# -------------------------
+# Worker Thread
+# -------------------------
 def send_async_email(app, msg):
     with app.app_context():
         try:
             mail.send(msg)
-            print(f"✅ ส่งอีเมลไปยัง {msg.recipients} สำเร็จ!")
-        except Exception as e:
-            print(f"❌ ส่งอีเมลล้มเหลว: {e}")
+            print(f"✅ Email sent to {msg.recipients}")
+        except Exception:
+            print("❌ Email send failed")
+            traceback.print_exc()
 
-# ✅ นี่คือฟังก์ชันที่ Error หาไม่เจอครับ ต้องมีตัวนี้นะ!
+# -------------------------
+# Public API
+# -------------------------
 def send_alert_email(to_email, project_name, days_left):
     if not to_email:
-        print("⚠️ ไม่พบอีเมลปลายทาง ข้ามการส่ง")
+        print("⚠️ No recipient email, skipping")
         return False
 
     subject = f"🔔 แจ้งเตือน: โครงการ '{project_name}' ใกล้ถึงกำหนดส่งแล้ว"
-    
+
     body = f"""
     <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
         <h2 style="color: #2c3e50;">เรียน นักวิจัย/ผู้รับผิดชอบโครงการ</h2>
@@ -36,11 +42,17 @@ def send_alert_email(to_email, project_name, days_left):
     </div>
     """
 
-    msg = Message(subject=subject, recipients=[to_email])
-    msg.html = body
+    msg = Message(
+        subject=subject,
+        recipients=[to_email],
+        html=body
+    )
 
     app = current_app._get_current_object()
+
+    # ใช้ thread เพื่อไม่ให้ block request
     thr = threading.Thread(target=send_async_email, args=(app, msg))
+    thr.daemon = True
     thr.start()
-    
+
     return True
