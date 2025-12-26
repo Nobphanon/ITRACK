@@ -19,6 +19,7 @@ def get_db():
 def init_db():
     conn = get_db()
 
+    # ---------- Projects ----------
     conn.execute("""
         CREATE TABLE IF NOT EXISTS research_projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,6 +33,7 @@ def init_db():
         )
     """)
 
+    # ---------- Users ----------
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,18 +44,14 @@ def init_db():
         )
     """)
 
-    conn.commit()
-    conn.close()
-
-def create_default_user():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users")
-    if cur.fetchone() is None:
+    # ---------- Default Admin ----------
+    cur = conn.execute("SELECT * FROM users WHERE username = 'admin'")
+    if not cur.fetchone():
         hashed_pw = generate_password_hash("1234")
-        cur.execute("""
+        conn.execute("""
             INSERT INTO users (username, password, email, role)
             VALUES (?, ?, ?, ?)
         """, ("admin", hashed_pw, "admin@test.com", "admin"))
-        conn.commit()
+
+    conn.commit()
     conn.close()
