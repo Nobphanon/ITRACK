@@ -31,7 +31,7 @@ mail.init_app(app)
 def _mail_test():
     msg = Message(
         subject="ITRACK MAIL TEST",
-        recipients=["ใส่อีเมลจริงของเธอที่นี่"],
+        recipients=["nonnydd2568@gmail.com"],
         body="This is a test email from ITRACK"
     )
     mail.send(msg)
