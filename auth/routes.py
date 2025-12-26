@@ -57,18 +57,24 @@ def change_password():
         new = request.form.get('new_password')
         confirm = request.form.get('confirm_password')
 
-        if not check_password_hash(current_user.password, old):
+        conn = get_db()
+        user_row = conn.execute(
+            "SELECT password FROM users WHERE id = ?",
+            (current_user.id,)
+        ).fetchone()
+
+        if not user_row or not check_password_hash(str(user_row['password']), old):
+            conn.close()
             flash('รหัสผ่านเดิมไม่ถูกต้อง', 'danger')
             return redirect(url_for('auth.change_password'))
 
         if new != confirm:
+            conn.close()
             flash('รหัสผ่านใหม่ไม่ตรงกัน', 'danger')
             return redirect(url_for('auth.change_password'))
 
         hashed = generate_password_hash(new)
-
-        conn = get_db()
-        conn.execute("UPDATE users SET password=? WHERE id=?", (hashed, current_user.id))
+        conn.execute("UPDATE users SET password = ? WHERE id = ?", (hashed, current_user.id))
         conn.commit()
         conn.close()
 
