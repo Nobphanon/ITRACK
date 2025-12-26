@@ -6,12 +6,12 @@ from flask import Flask
 from flask_login import LoginManager
 from models import init_db, get_db, User
 from extensions import mail
+from flask_mail import Message
 
 # ================== 🧱 App Setup ==================
 app = Flask(__name__)
 
 # ================== 🔐 Security ==================
-# ❗ ห้ามสุ่ม secret และห้ามเขียนค่าลงโค้ด
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SESSION_PERMANENT'] = False
 
@@ -19,11 +19,23 @@ app.config['SESSION_PERMANENT'] = False
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USERNAME'] = 'kissmemore248@gmail.com'
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = ('ITRACK Alert', app.config['MAIL_USERNAME'])
 
 mail.init_app(app)
+
+# ================== 🧪 Mail Test Route ==================
+@app.route("/_mail_test")
+def _mail_test():
+    msg = Message(
+        subject="ITRACK MAIL TEST",
+        recipients=["ใส่อีเมลจริงของเธอที่นี่"],
+        body="This is a test email from ITRACK"
+    )
+    mail.send(msg)
+    return "MAIL SENT"
 
 # ================== 👤 Login ==================
 login_manager = LoginManager()
