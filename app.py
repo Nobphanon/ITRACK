@@ -1,5 +1,5 @@
 import os
-from datetime import datetime  # ✅ เพิ่มบรรทัดนี้แล้ว (แก้ Error)
+from datetime import datetime
 from flask import Flask
 from flask_login import LoginManager
 from models import init_db, get_db, User
@@ -15,15 +15,16 @@ app.config['SESSION_PERMANENT'] = False
 # =========================================================
 # 📧 Email Configuration
 # =========================================================
-# ✅ เพิ่มการตรวจสอบค่า Environment Variables
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', ('ITRACK Alert', app.config['MAIL_USERNAME']))
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv(
+    'MAIL_DEFAULT_SENDER',
+    ('ITRACK Alert', app.config['MAIL_USERNAME'])
+)
 
-# Debug: เช็คว่าโหลดค่ามาได้จริงไหม
 if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
     print("⚠️ WARNING: MAIL_USERNAME or MAIL_PASSWORD not set!")
 else:
@@ -48,7 +49,7 @@ def load_user(user_id):
     return None
 
 # =========================================================
-# 🚀 Blueprints & Routes
+# 🚀 Blueprints
 # =========================================================
 from auth.routes import auth_bp
 from Research.routes import research_bp
@@ -56,22 +57,25 @@ from Research.routes import research_bp
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(research_bp)
 
-# ✅ Import Scheduler (ต้องมีไฟล์ notifications/scheduler.py ด้วยนะ)
+# =========================================================
+# 🧱 Database Initialization (CRITICAL FIX FOR RENDER)
+# =========================================================
+with app.app_context():
+    init_db()
+
+# =========================================================
+# ⏰ Scheduler & Routes
+# =========================================================
 from notifications.scheduler import notify_deadlines
 
-# Route สำหรับ Cron Jobs หรือยิงทดสอบ
 @app.route('/cron/check-deadlines', methods=['GET', 'POST'])
 def check_deadlines_endpoint():
-    """
-    Endpoint สำหรับตรวจสอบ deadlines
-    สามารถเรียกผ่าน Render Cron Jobs หรือ manual trigger
-    """
     try:
         count = notify_deadlines()
         return {
             'success': True,
             'message': f'Sent {count} notification(s)',
-            'timestamp': datetime.now().isoformat() # ✅ ใช้งานได้แล้ว
+            'timestamp': datetime.now().isoformat()
         }, 200
     except Exception as e:
         return {
@@ -80,7 +84,12 @@ def check_deadlines_endpoint():
             'timestamp': datetime.now().isoformat()
         }, 500
 
+# =========================================================
+# 🧪 Local Dev Only
+# =========================================================
 if __name__ == "__main__":
-    init_db()
-    # ✅ เปลี่ยน debug=False สำหรับ production, True สำหรับ dev ในเครื่อง
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
+    app.run(
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        debug=True
+    )
