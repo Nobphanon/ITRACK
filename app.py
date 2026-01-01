@@ -3,7 +3,6 @@ from datetime import datetime
 from flask import Flask
 from flask_login import LoginManager
 from models import init_db, get_db, User
-from extensions import mail
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,26 +12,16 @@ app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['SESSION_PERMANENT'] = False
 
 # =========================================================
-# 📧 Email Configuration (HARDENED)
+# 📧 SendGrid Configuration
 # =========================================================
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_TIMEOUT'] = 30
+app.config['SENDGRID_API_KEY'] = os.getenv("SENDGRID_API_KEY")
+app.config['MAIL_SENDER'] = os.getenv("MAIL_SENDER")
 
-# ---- CRITICAL FIX: Never allow None sender ----
-if not app.config['MAIL_USERNAME']:
-    raise RuntimeError("MAIL_USERNAME is missing")
+if not app.config['SENDGRID_API_KEY'] or not app.config['MAIL_SENDER']:
+    raise RuntimeError("SENDGRID_API_KEY or MAIL_SENDER is missing")
 
-app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
-
-print("📨 Mail config loaded:")
-print("  Server:", app.config['MAIL_SERVER'])
-print("  User:", app.config['MAIL_USERNAME'])
-
-mail.init_app(app)
+print("📨 SendGrid ready:")
+print("  Sender:", app.config['MAIL_SENDER'])
 
 # =========================================================
 # 🔐 Login Manager
@@ -64,22 +53,6 @@ app.register_blueprint(research_bp)
 # =========================================================
 with app.app_context():
     init_db()
-
-# =========================================================
-# 🧪 Mail Health Check Route
-# =========================================================
-from flask_mail import Message
-
-@app.route('/_mail_test')
-def mail_test():
-    msg = Message(
-        subject="ITRACK MAIL SYSTEM OK",
-        recipients=[app.config['MAIL_USERNAME']],
-        body="If you see this email, your system is working perfectly."
-    )
-    with app.app_context():
-        mail.send(msg)
-    return "Mail sent successfully"
 
 # =========================================================
 # ⏰ Scheduler Endpoint
