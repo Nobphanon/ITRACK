@@ -82,3 +82,4 @@ def change_password():
         return redirect(url_for('research.landing'))
 
     return render_template('auth/change_password.html')
+    

@@ -1,98 +1,109 @@
 import sqlite3
 import pandas as pd
 from datetime import datetime
-import schedule
-import time
+import logging
 
-from notifications.email_service import send_email
+from notifications.email_service import send_alert_email
 
 DB_NAME = "database.db"
 
-def run_scheduler():
-    print("Scheduler started")
+# ตั้งค่า logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def notify_deadlines():
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
+    """
+    ตรวจสอบและส่งการแจ้งเตือนสำหรับโครงการที่ใกล้ครบกำหนด
+    """
+    logger.info("🔍 เริ่มตรวจสอบ deadlines...")
+    
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id, researcher_email, project_title, deadline
-        FROM research_projects
-    """)
-    projects = cur.fetchall()
+        cur.execute("""
+            SELECT id, researcher_email, project_title, deadline
+            FROM research_projects
+            WHERE researcher_email IS NOT NULL
+        """)
+        projects = cur.fetchall()
 
-    today = datetime.today().date()
+        if not projects:
+            logger.info("ℹ️ ไม่พบโครงการที่ต้องตรวจสอบ")
+            conn.close()
+            return
 
-    for project_id, email, title, deadline_str in projects:
-        deadline_date = pd.to_datetime(deadline_str, errors="coerce")
-        if pd.isna(deadline_date):
-            continue
+        today = datetime.today().date()
+        notifications_sent = 0
 
-        days_left = (deadline_date.date() - today).days
+        for project_id, email, title, deadline_str in projects:
+            try:
+                deadline_date = pd.to_datetime(deadline_str, errors="coerce")
+                if pd.isna(deadline_date):
+                    logger.warning(f"⚠️ โครงการ ID {project_id} มี deadline ไม่ถูกต้อง: {deadline_str}")
+                    continue
 
-        # ===============================
-        # แจ้งเตือน 7 วันก่อน (ครั้งเดียว)
-        # ===============================
-        if days_left == 7:
-            cur.execute("""
-                SELECT 1 FROM notification_log
-                WHERE project_id = ? AND notify_type = '7_days'
-            """, (project_id,))
-            already_sent = cur.fetchone()
+                days_left = (deadline_date.date() - today).days
 
-            if not already_sent:
-                send_email(
-                    email,
-                    "⏰ Research Deadline Reminder (7 days left)",
-                    f"""Project: {title}
-Deadline: {deadline_str}
+                # ===========================
+                # แจ้งเตือน 7 วันก่อน
+                # ===========================
+                if days_left == 7:
+                    cur.execute("""
+                        SELECT 1 FROM notification_log
+                        WHERE project_id = ? AND notify_type = '7_days'
+                    """, (project_id,))
+                    already_sent = cur.fetchone()
 
-Remaining: 7 days
-"""
-                )
-                cur.execute("""
-                    INSERT INTO notification_log
-                    (project_id, notify_type, sent_at)
-                    VALUES (?, '7_days', datetime('now'))
-                """, (project_id,))
+                    if not already_sent:
+                        success, error = send_alert_email(email, title, days_left)
+                        
+                        if success:
+                            cur.execute("""
+                                INSERT INTO notification_log
+                                (project_id, notify_type, sent_at)
+                                VALUES (?, '7_days', datetime('now'))
+                            """, (project_id,))
+                            logger.info(f"✅ ส่งการแจ้งเตือน 7 วัน ไปยัง {email} (โครงการ: {title})")
+                            notifications_sent += 1
+                        else:
+                            logger.error(f"❌ ส่งอีเมลล้มเหลว: {error}")
 
-        # ===============================
-        # แจ้งเตือนวันครบกำหนด (ครั้งเดียว)
-        # ===============================
-        if days_left == 0:
-            cur.execute("""
-                SELECT 1 FROM notification_log
-                WHERE project_id = ? AND notify_type = 'due_date'
-            """, (project_id,))
-            already_sent = cur.fetchone()
+                # ===========================
+                # แจ้งเตือนวันครบกำหนด
+                # ===========================
+                elif days_left == 0:
+                    cur.execute("""
+                        SELECT 1 FROM notification_log
+                        WHERE project_id = ? AND notify_type = 'due_date'
+                    """, (project_id,))
+                    already_sent = cur.fetchone()
 
-            if not already_sent:
-                send_email(
-                    email,
-                    "🚨 Research Deadline Today",
-                    f"""Project: {title}
-Deadline: {deadline_str}
+                    if not already_sent:
+                        success, error = send_alert_email(email, title, days_left)
+                        
+                        if success:
+                            cur.execute("""
+                                INSERT INTO notification_log
+                                (project_id, notify_type, sent_at)
+                                VALUES (?, 'due_date', datetime('now'))
+                            """, (project_id,))
+                            logger.info(f"✅ ส่งการแจ้งเตือนวันครบกำหนด ไปยัง {email} (โครงการ: {title})")
+                            notifications_sent += 1
+                        else:
+                            logger.error(f"❌ ส่งอีเมลล้มเหลว: {error}")
 
-⚠ Today is the deadline.
-"""
-                )
-                cur.execute("""
-                    INSERT INTO notification_log
-                    (project_id, notify_type, sent_at)
-                    VALUES (?, 'due_date', datetime('now'))
-                """, (project_id,))
+            except Exception as e:
+                logger.error(f"❌ เกิดข้อผิดพลาดกับโครงการ ID {project_id}: {str(e)}")
+                continue
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ ตรวจสอบเสร็จสิ้น - ส่งการแจ้งเตือนทั้งหมด {notifications_sent} รายการ")
+        return notifications_sent
 
-
-# ===============================
-# Scheduler (รันทุกวัน 06:00)
-# ===============================
-def run_scheduler():
-    schedule.every().day.at("06:00").do(notify_deadlines)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    except Exception as e:
+        logger.error(f"❌ เกิดข้อผิดพลาดในการตรวจสอบ deadlines: {str(e)}")
+        return 0

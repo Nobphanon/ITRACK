@@ -137,7 +137,6 @@ def preview_sheet():
 @research_bp.route("/map-columns", methods=["POST"])
 @login_required
 def map_columns():
-    # ✅ 1. เพิ่ม researcher_email กลับเข้ามาในรายการ Fields
     fields = ["project_th","project_en","researcher_name","researcher_email","affiliation","funding","deadline"]
     mapping = {f: request.form.get(f) for f in fields}
     
@@ -164,7 +163,7 @@ def map_columns():
                 dt = pd.to_datetime(r[d_col], errors="coerce")
                 if not pd.isna(dt): dl_str = dt.strftime("%Y-%m-%d")
 
-            # ✅ 2. ดึงอีเมลจากคอลัมน์ Excel
+            # ✅ ดึงอีเมลจากคอลัมน์ Excel
             email_val = ""
             e_col = mapping.get("researcher_email")
             if e_col and e_col in r:
@@ -177,7 +176,7 @@ def map_columns():
                 (str(r.get(mapping.get("project_th"), "")), 
                  str(r.get(mapping.get("project_en"), "")),
                  str(r.get(mapping.get("researcher_name"), "")), 
-                 email_val, # บันทึกอีเมลที่อ่านจาก Excel
+                 email_val,
                  str(r.get(mapping.get("affiliation"), "")), 
                  fund, dl_str))
             count += 1
@@ -279,33 +278,49 @@ def delete_project(pid):
         
     return redirect(url_for("research.dashboard"))
 
-# ✅ เพิ่ม Route ส่งแจ้งเตือน (ที่หายไป) กลับเข้ามา
+# ✅ Route ส่งแจ้งเตือน (แก้ไขแล้ว)
 @research_bp.route("/send-alert/<int:pid>", methods=["POST"])
 @login_required
 def send_project_alert(pid):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM research_projects WHERE id = ?", (pid,)).fetchone()
-    conn.close()
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT * FROM research_projects WHERE id = ?", (pid,)).fetchone()
+        conn.close()
 
-    if not row:
-        flash("ไม่พบข้อมูลโครงการ", "danger")
-        return redirect(url_for("research.dashboard"))
+        if not row:
+            flash("ไม่พบข้อมูลโครงการ", "danger")
+            return redirect(url_for("research.dashboard"))
 
-    # คำนวณวันเหลืออีกรอบ
-    today = datetime.today().date()
-    days_left = "ไม่ระบุ"
-    if row['deadline']:
-        try:
-            dt = pd.to_datetime(row['deadline'])
-            days_left = (dt.date() - today).days
-        except: pass
+        # ตรวจสอบอีเมล
+        if not row['researcher_email']:
+            flash("โครงการนี้ไม่มีข้อมูลอีเมล (กรุณาตรวจสอบไฟล์ Excel)", "warning")
+            return redirect(url_for("research.dashboard"))
 
-    # เรียกใช้ฟังก์ชันส่งเมล
-    if row['researcher_email']:
-        # ส่งเมลหาเจ้าของโครงการนั้นๆ
-        send_alert_email(row['researcher_email'], row['project_th'], days_left)
-        flash(f"กำลังส่งอีเมลแจ้งเตือนไปยัง {row['researcher_email']}...", "success")
-    else:
-        flash("โครงการนี้ไม่มีข้อมูลอีเมล (กรุณาตรวจสอบไฟล์ Excel)", "warning")
+        # คำนวณวันเหลือ
+        today = datetime.today().date()
+        days_left = 0
+        
+        if row['deadline']:
+            try:
+                dt = pd.to_datetime(row['deadline'], errors='coerce')
+                if not pd.isna(dt):
+                    days_left = (dt.date() - today).days
+            except Exception as e:
+                print(f"Error parsing deadline: {e}")
+
+        # ✅ เรียกใช้ฟังก์ชันส่งเมล (แบบใหม่ที่ return tuple)
+        success, error = send_alert_email(
+            row['researcher_email'], 
+            row['project_th'], 
+            days_left
+        )
+
+        if success:
+            flash(f"✅ ส่งอีเมลแจ้งเตือนไปยัง {row['researcher_email']} สำเร็จ!", "success")
+        else:
+            flash(f"❌ ส่งอีเมลล้มเหลว: {error}", "danger")
+
+    except Exception as e:
+        flash(f"❌ เกิดข้อผิดพลาด: {str(e)}", "danger")
 
     return redirect(url_for("research.dashboard"))
