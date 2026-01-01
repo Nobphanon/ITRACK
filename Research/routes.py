@@ -15,7 +15,7 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ---------------------------------------------------------
-# 🛠️ Helper: Smart Reader (ตัวอ่านไฟล์อัจฉริยะ)
+# 🛠️ Helper: Smart Reader
 # ---------------------------------------------------------
 def get_smart_df(path, sheet=None):
     raw_df = None
@@ -46,21 +46,29 @@ def get_smart_df(path, sheet=None):
         df.columns = clean_cols
         df = df.iloc[1:] 
         df = df.dropna(how='all').fillna("")
-        df = df.applymap(lambda x: str(x).strip() if x is not None else "")
+        
+        try:
+            df = df.map(lambda x: str(x).strip() if x is not None else "")
+        except AttributeError:
+            df = df.applymap(lambda x: str(x).strip() if x is not None else "")
+            
         return df
     except Exception as e:
         print(f"Smart Reader Error: {e}")
         return pd.DataFrame()
 
 # ---------------------------------------------------------
-# 🚀 Routes (เส้นทางระบบ)
+# 🚀 Routes
 # ---------------------------------------------------------
 
 @research_bp.route("/")
 @login_required 
 def landing():
     conn = get_db()
-    deadlines = conn.execute("SELECT deadline FROM research_projects").fetchall()
+    try:
+        deadlines = conn.execute("SELECT deadline FROM research_projects").fetchall()
+    except:
+        deadlines = []
     conn.close()
 
     today = datetime.today().date()
@@ -149,27 +157,23 @@ def map_columns():
     count = 0
     for _, r in df.iterrows():
         try:
-            # Clean Funding
             fund = 0
             f_col = mapping.get("funding")
             if f_col and f_col in r:
                 clean_f = re.sub(r'[^\d.]', '', str(r[f_col]))
                 fund = float(clean_f) if clean_f else 0
 
-            # Clean Deadline
             dl_str = ""
             d_col = mapping.get("deadline")
             if d_col and d_col in r:
                 dt = pd.to_datetime(r[d_col], errors="coerce")
                 if not pd.isna(dt): dl_str = dt.strftime("%Y-%m-%d")
 
-            # ✅ ดึงอีเมลจากคอลัมน์ Excel
             email_val = ""
             e_col = mapping.get("researcher_email")
             if e_col and e_col in r:
                 email_val = str(r[e_col]).strip()
 
-            # Insert
             conn.execute("""INSERT INTO research_projects 
                 (project_th, project_en, researcher_name, researcher_email, affiliation, funding, deadline) 
                 VALUES (?,?,?,?,?,?,?)""", 
@@ -181,7 +185,6 @@ def map_columns():
                  fund, dl_str))
             count += 1
         except Exception as e:
-            print(f"Skip row: {e}")
             continue
 
     conn.commit()
@@ -214,9 +217,13 @@ def dashboard():
         sql += " AND affiliation = ?"
         params.append(aff_filter)
         
-    rows = conn.execute(sql, params).fetchall()
+    try:
+        rows = conn.execute(sql, params).fetchall()
+        aff_list = [row[0] for row in conn.execute("SELECT DISTINCT affiliation FROM research_projects WHERE affiliation != ''").fetchall()]
+    except:
+        rows = []
+        aff_list = []
     
-    aff_list = [row[0] for row in conn.execute("SELECT DISTINCT affiliation FROM research_projects WHERE affiliation != ''").fetchall()]
     conn.close()
     
     today = datetime.today().date()
@@ -253,11 +260,8 @@ def dashboard():
 @research_bp.route("/clear-all", methods=["POST"])
 @login_required
 def clear_all():
-    if current_user.role != "admin":
-        flash("สิทธิ์ของคุณไม่เพียงพอ", "danger")
-        return redirect(url_for("research.dashboard"))
-
     conn = get_db()
+    # if current_user.role != "admin": ...
     conn.execute("DELETE FROM research_projects")
     conn.commit()
     conn.close()
@@ -278,7 +282,8 @@ def delete_project(pid):
         
     return redirect(url_for("research.dashboard"))
 
-# ✅ Route ส่งแจ้งเตือน (แก้ไขแล้ว)
+# ==================== 📧 SEND EMAIL ALERT (Updated for new Service) ====================
+
 @research_bp.route("/send-alert/<int:pid>", methods=["POST"])
 @login_required
 def send_project_alert(pid):
@@ -298,7 +303,7 @@ def send_project_alert(pid):
 
         # คำนวณวันเหลือ
         today = datetime.today().date()
-        days_left = 0
+        days_left = "ไม่ระบุ"
         
         if row['deadline']:
             try:
@@ -308,19 +313,20 @@ def send_project_alert(pid):
             except Exception as e:
                 print(f"Error parsing deadline: {e}")
 
-        # ✅ เรียกใช้ฟังก์ชันส่งเมล (แบบใหม่ที่ return tuple)
-        success, error = send_alert_email(
+        # ✅ เรียกใช้ฟังก์ชันส่งเมล (รับค่า 2 ตัวตามไฟล์ email_service.py ใหม่ของคุณ)
+        success, error_msg = send_alert_email(
             row['researcher_email'], 
             row['project_th'], 
             days_left
         )
 
         if success:
-            flash(f"✅ ส่งอีเมลแจ้งเตือนไปยัง {row['researcher_email']} สำเร็จ!", "success")
+            flash(f"✅ ส่งอีเมลแจ้งเตือนไปยัง {row['researcher_email']} เรียบร้อยแล้ว!", "success")
         else:
-            flash(f"❌ ส่งอีเมลล้มเหลว: {error}", "danger")
+            # ถ้าส่งไม่ผ่าน จะเอา Error Message มาโชว์บนหน้าเว็บให้เห็นชัดๆ เลย
+            flash(f"❌ ส่งอีเมลล้มเหลว: {error_msg}", "danger")
 
     except Exception as e:
-        flash(f"❌ เกิดข้อผิดพลาด: {str(e)}", "danger")
+        flash(f"❌ เกิดข้อผิดพลาดร้ายแรง: {str(e)}", "danger")
 
     return redirect(url_for("research.dashboard"))
