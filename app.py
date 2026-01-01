@@ -20,6 +20,7 @@ app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_TIMEOUT'] = 30
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv(
     'MAIL_DEFAULT_SENDER',
     ('ITRACK Alert', app.config['MAIL_USERNAME'])

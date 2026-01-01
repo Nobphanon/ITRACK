@@ -1,28 +1,29 @@
 from flask_mail import Message
 from flask import current_app
 from extensions import mail
+from smtplib import SMTPException
+import socket
 import logging
 
-# ตั้งค่า logging
+# Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def send_alert_email(to_email, project_name, days_left):
     """
-    ส่งอีเมลแจ้งเตือนโครงการใกล้ถึงกำหนด
+    Send project deadline alert email
     Returns: (success: bool, error_message: str or None)
     """
     if not to_email:
-        logger.warning("⚠️ ไม่พบอีเมลปลายทาง ข้ามการส่ง")
+        logger.warning("⚠️ No recipient email")
         return False, "No recipient email"
 
-    # ตรวจสอบ mail config
     if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
-        logger.error("❌ ไม่พบการตั้งค่าอีเมล (MAIL_USERNAME/MAIL_PASSWORD)")
+        logger.error("❌ Mail configuration missing")
         return False, "Mail configuration missing"
 
     subject = f"🔔 แจ้งเตือน: โครงการ '{project_name}' ใกล้ถึงกำหนดส่งแล้ว"
-    
+
     body_html = f"""
     <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
         <h2 style="color: #2c3e50;">เรียน นักวิจัย/ผู้รับผิดชอบโครงการ</h2>
@@ -38,15 +39,15 @@ def send_alert_email(to_email, project_name, days_left):
         </p>
     </div>
     """
-    
+
     body_text = f"""
     เรียน นักวิจัย/ผู้รับผิดชอบโครงการ
-    
+
     ระบบ ITRACK ขอแจ้งเตือนสถานะโครงการวิจัยของท่าน:
-    
+
     📂 โครงการ: {project_name}
     ⏳ เหลือเวลาอีก {days_left} วัน จะถึงกำหนดส่ง (Deadline)
-    
+
     *จดหมายฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับ
     """
 
@@ -54,25 +55,23 @@ def send_alert_email(to_email, project_name, days_left):
         msg = Message(
             subject=subject,
             recipients=[to_email],
-            body=body_text,  # Plain text version
-            html=body_html   # HTML version
+            body=body_text,
+            html=body_html
         )
-        
-        # ส่งแบบ synchronous (ไม่ใช้ threading)
+
         mail.send(msg)
-        logger.info(f"✅ ส่งอีเมลไปยัง {to_email} สำเร็จ!")
+        logger.info(f"✅ Sent email to {to_email}")
         return True, None
-        
-    except Exception as e:
+
+    except (SMTPException, socket.timeout, socket.error) as e:
         error_msg = str(e)
-        logger.error(f"❌ ส่งอีเมลล้มเหลว: {error_msg}")
+        logger.error(f"❌ Email send failed: {error_msg}")
         return False, error_msg
 
 
-# ✅ ฟังก์ชันทดสอบส่งอีเมล (สำหรับ debug)
 def test_email_config():
     """
-    ทดสอบการตั้งค่าอีเมล
+    Debug email configuration
     """
     try:
         config = current_app.config
@@ -83,11 +82,11 @@ def test_email_config():
         logger.info(f"MAIL_USERNAME: {config.get('MAIL_USERNAME')}")
         logger.info(f"MAIL_PASSWORD: {'***' if config.get('MAIL_PASSWORD') else 'NOT SET'}")
         logger.info("===========================")
-        
+
         if not config.get('MAIL_USERNAME') or not config.get('MAIL_PASSWORD'):
             return False, "MAIL_USERNAME or MAIL_PASSWORD not configured"
-            
+
         return True, "Configuration looks good"
-        
+
     except Exception as e:
         return False, str(e)
