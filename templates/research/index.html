@@ -41,6 +41,8 @@
         
         .navbar-brand { letter-spacing: 1px; font-weight: 600; }
         .table { font-family: 'Sarabun', sans-serif; font-size: 0.85rem; }
+
+        .border-danger { border: 2px solid #dc3545 !important; }
     </style>
 </head>
 
@@ -244,18 +246,53 @@
     </div>
 
     <script>
-        window.onload = () => document.getElementById("page-loader").classList.add("hide");
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', () => {
-                document.getElementById("page-loader").classList.remove("hide");
-            });
-        });
-        document.getElementById('fileInput').onchange = function() {
-            if (this.files.length > 0) {
-                const container = document.getElementById('uploadText');
-                container.innerHTML = `<span class="text-primary fw-bold" style="font-size: 0.95rem;"><i class="bi bi-check-circle-fill me-1"></i>${this.files[0].name}</span>`;
+window.onload = () => document.getElementById("page-loader").classList.add("hide");
+
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
+        document.getElementById("page-loader").classList.remove("hide");
+    });
+});
+
+const selects = document.querySelectorAll('select[name]');
+selects.forEach(sel => {
+    sel.addEventListener('change', () => {
+        const used = {};
+        selects.forEach(s => {
+            if (s.value) {
+                if (used[s.value]) {
+                    s.classList.add('border-danger');
+                    used[s.value].classList.add('border-danger');
+                } else {
+                    used[s.value] = s;
+                    s.classList.remove('border-danger');
+                }
+            } else {
+                s.classList.remove('border-danger');
             }
-        };
-    </script>
+        });
+    });
+});
+
+document.querySelector('form[action$="map-columns"]')?.addEventListener('submit', e => {
+    const important = ['project_th','researcher_name','deadline'];
+    let ok = false;
+    important.forEach(f => {
+        const el = document.querySelector(`select[name="${f}"]`);
+        if (el && el.value) ok = true;
+    });
+    if (!ok) {
+        e.preventDefault();
+        alert("ควรระบุอย่างน้อย 1 field สำคัญ เช่น ชื่อโครงการ / ผู้วิจัย / วันครบกำหนด");
+    }
+});
+
+document.getElementById('fileInput').onchange = function() {
+    if (this.files.length > 0) {
+        const container = document.getElementById('uploadText');
+        container.innerHTML = `<span class="text-primary fw-bold"><i class="bi bi-check-circle-fill me-1"></i>${this.files[0].name}</span>`;
+    }
+};
+</script>
 </body>
 </html>
