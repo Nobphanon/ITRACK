@@ -12,16 +12,17 @@ app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['SESSION_PERMANENT'] = False
 
 # =========================================================
-# 📧 SendGrid Configuration
+# 📧 SendGrid Configuration (SAFE)
 # =========================================================
 app.config['SENDGRID_API_KEY'] = os.getenv("SENDGRID_API_KEY")
 app.config['MAIL_SENDER'] = os.getenv("MAIL_SENDER")
 
 if not app.config['SENDGRID_API_KEY'] or not app.config['MAIL_SENDER']:
-    raise RuntimeError("SENDGRID_API_KEY or MAIL_SENDER is missing")
+    print("⚠️ WARNING: SendGrid environment variables not configured")
 
-print("📨 SendGrid ready:")
-print("  Sender:", app.config['MAIL_SENDER'])
+else:
+    print("📨 SendGrid ready:")
+    print("  Sender:", app.config['MAIL_SENDER'])
 
 # =========================================================
 # 🔐 Login Manager
@@ -40,10 +41,10 @@ def load_user(user_id):
     return None
 
 # =========================================================
-# 🚀 Blueprints
+# 🚀 Blueprints (CASE FIX)
 # =========================================================
 from auth.routes import auth_bp
-from Research.routes import research_bp
+from research.routes import research_bp   # <-- สำคัญ: เปลี่ยน Research -> research
 
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(research_bp)
