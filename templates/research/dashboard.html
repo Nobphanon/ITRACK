@@ -41,199 +41,159 @@
 
 <body>
 
-    <div id="page-loader" class="loader-overlay">
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status"></div>
-            <div class="mt-2 fw-bold text-secondary">กำลังโหลดข้อมูล...</div>
-        </div>
+<div id="page-loader" class="loader-overlay">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 fw-bold text-secondary">กำลังโหลดข้อมูล...</div>
     </div>
+</div>
 
-    <nav class="navbar navbar-expand-lg navbar-dark py-3">
-        <div class="container">
-            <a class="navbar-brand fs-4" href="{{ url_for('research.landing') }}">ITRACK</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('research.landing') }}">
-                            <i class="bi bi-house-door-fill me-1"></i> หน้าหลัก
+<nav class="navbar navbar-expand-lg navbar-dark py-3">
+    <div class="container">
+        <a class="navbar-brand fs-4" href="{{ url_for('research.landing') }}">ITRACK</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('research.landing') }}">
+                        <i class="bi bi-house-door-fill me-1"></i> หน้าหลัก
+                    </a>
+                </li>
+                
+                <li class="nav-item ms-lg-3">
+                    <div class="d-flex align-items-center text-white-50 bg-white bg-opacity-10 px-3 py-1 rounded-pill">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span class="small me-3">{{ current_user.username }}</span>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-danger rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;" title="ออกจากระบบ">
+                            <i class="bi bi-power" style="font-size: 0.8rem;"></i>
                         </a>
-                    </li>
-                    
-                    <li class="nav-item ms-lg-3">
-                        <div class="d-flex align-items-center text-white-50 bg-white bg-opacity-10 px-3 py-1 rounded-pill">
-                            <i class="bi bi-person-circle me-2"></i>
-                            <span class="small me-3">{{ current_user.username }}</span>
-                            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-danger rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;" title="ออกจากระบบ">
-                                <i class="bi bi-power" style="font-size: 0.8rem;"></i>
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container py-4">
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        <div class="d-flex justify-content-between align-items-end mb-4">
-            <div>
-                <h3 class="fw-bold mb-1">ระบบจัดการโครงการวิจัย</h3>
-                <p class="text-muted mb-0 small">ติดตามสถานะและตรวจสอบข้อมูลงานวิจัยทั้งหมดในระบบ</p>
-            </div>
-            
-            <form action="{{ url_for('research.clear_all') }}" method="POST" onsubmit="return confirm('คุณต้องการลบข้อมูลโครงการทั้งหมดใช่หรือไม่?')">
-                <button class="btn btn-outline-danger btn-sm px-3 fw-bold rounded-pill">
-                    <i class="bi bi-trash3 me-1"></i> ล้างข้อมูลทั้งหมด
-                </button>
-            </form>
-        </div>
-
-        <div class="card filter-card shadow-sm">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-secondary">ค้นหาข้อมูล</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
-                        <input class="form-control bg-light border-0" name="q" placeholder="ชื่อโครงการ / นักวิจัย / สังกัด..." value="{{ q }}">
                     </div>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-secondary">หน่วยงาน/สังกัด</label>
-                    <select class="form-select bg-light border-0" name="aff">
-                        <option value="">-- ทั้งหมด --</option>
-                        {% for a in aff_list %}
-                            <option value="{{ a }}" {% if a==aff_filter %}selected{% endif %}>{{ a }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-secondary">สถานะโครงการ</label>
-                    <select class="form-select bg-light border-0" name="status">
-                        <option value="">-- ทุกสถานะ --</option>
-                        {% for s in ['On Track', 'Near Deadline', 'Overdue'] %}
-                            <option {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-2 d-grid align-items-end">
-                    <button class="btn btn-primary fw-bold py-2 shadow-sm">กรองข้อมูล</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="mb-3 ps-1">
-            <span class="text-muted small">พบข้อมูลโครงการทั้งหมด <strong>{{ total }}</strong> รายการ</span>
-        </div>
-
-        <div class="card shadow-sm overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">ชื่อโครงการ (ไทย)</th>
-                            <th style="width: 25%;">ชื่อโครงการ (English)</th>
-                            <th>ผู้รับผิดชอบ</th>
-                            <th>สังกัด</th>
-                            <th>งบประมาณ</th>
-                            <th>กำหนดส่ง</th>
-                            <th class="text-center">สถานะ</th>
-                            <th class="text-end">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in projects %}
-                        <tr>
-                            <td>
-                                <span class="project-title-th">{{ p.project_th }}</span>
-                            </td>
-                            <td>
-                                <span class="project-title-en text-muted">
-                                    {% if p.project_en and p.project_en != "" %}
-                                        {{ p.project_en }}
-                                    {% else %}
-                                        <span class="opacity-25">-</span>
-                                    {% endif %}
-                                </span>
-                            </td>
-                            <td class="small">
-                                <i class="bi bi-person-circle me-1 text-muted"></i> {{ p.researcher_name }}
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark border fw-normal">{{ p.affiliation }}</span>
-                            </td>
-                            <td class="fw-bold text-primary">
-                                {% if p.funding and p.funding > 0 %}
-                                    {{ "{:,.0f}".format(p.funding) }}
-                                {% else %}
-                                    <span class="text-muted opacity-50">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="small text-muted">{{ p.deadline }}</td>
-                            <td class="text-center">
-                                {% set s_color = 'secondary' %}
-                                {% if p.status_text == 'On Track' %}{% set s_color = 'success' %}
-                                {% elif p.status_text == 'Near Deadline' %}{% set s_color = 'warning' %}
-                                {% elif p.status_text == 'Overdue' %}{% set s_color = 'danger' %}
-                                {% endif %}
-                                <span class="badge bg-soft-{{ s_color }}">{{ p.status_text }}</span>
-                            </td>
-                            
-                            <td class="text-end">
-                                <div class="d-flex justify-content-end gap-1">
-                                    <form method="POST" action="{{ url_for('research.send_project_alert', pid=p.id) }}">
-                                        <button class="btn btn-warning btn-action text-white" title="ส่งเมลแจ้งเตือน" 
-                                                onclick="return confirm('ต้องการส่งอีเมลแจ้งเตือนไปยัง {{ p.researcher_email }} ใช่หรือไม่?')">
-                                            <i class="bi bi-envelope-fill"></i>
-                                        </button>
-                                    </form>
-
-                                    <form method="POST" action="{{ url_for('research.delete_project', pid=p.id) }}" onsubmit="return confirm('ยืนยันการลบรายการนี้?')">
-                                        <button class="btn btn-light btn-action text-danger" title="ลบข้อมูล">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            {% if not projects %}
-            <div class="text-center py-5">
-                <i class="bi bi-inbox text-muted opacity-25" style="font-size: 3rem;"></i>
-                <p class="text-muted mt-2">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
-            </div>
-            {% endif %}
+                </li>
+            </ul>
         </div>
     </div>
+</nav>
 
-    <script>
-        const loader = document.getElementById("page-loader");
-        window.addEventListener("load", () => {
-            setTimeout(() => {
-                loader.classList.add("hide");
-            }, 300);
-        });
-    </script>
+<div class="container py-4">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">ระบบจัดการโครงการวิจัย</h3>
+        <p class="text-muted mb-0 small">ติดตามสถานะและตรวจสอบข้อมูลงานวิจัยทั้งหมดในระบบ</p>
+    </div>
+    
+    <form action="{{ url_for('research.clear_all') }}" method="POST" onsubmit="return confirm('คุณต้องการลบข้อมูลโครงการทั้งหมดใช่หรือไม่?')">
+        <button class="btn btn-outline-danger btn-sm px-3 fw-bold rounded-pill">
+            <i class="bi bi-trash3 me-1"></i> ล้างข้อมูลทั้งหมด
+        </button>
+    </form>
+</div>
+
+<div class="card filter-card shadow-sm">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-secondary">ค้นหาข้อมูล</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+                <input class="form-control bg-light border-0" name="q" placeholder="ชื่อโครงการ / นักวิจัย / สังกัด..." value="{{ q }}">
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-bold text-secondary">หน่วยงาน/สังกัด</label>
+            <select class="form-select bg-light border-0" name="aff">
+                <option value="">-- ทั้งหมด --</option>
+                {% for a in aff_list %}
+                    <option value="{{ a }}" {% if a==aff_filter %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-bold text-secondary">สถานะโครงการ</label>
+            <select class="form-select bg-light border-0" name="status">
+                <option value="">-- ทุกสถานะ --</option>
+                {% for s in ['On Track', 'Near Deadline', 'Overdue'] %}
+                    <option {% if status_filter==s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2 d-grid align-items-end">
+            <button class="btn btn-primary fw-bold py-2 shadow-sm">กรองข้อมูล</button>
+        </div>
+    </form>
+</div>
+
+<div class="mb-3 ps-1">
+    <span class="text-muted small">พบข้อมูลโครงการทั้งหมด <strong>{{ total }}</strong> รายการ</span>
+</div>
+
+<div class="card shadow-sm overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 22%;">ชื่อโครงการ (ไทย)</th>
+                    <th style="width: 22%;">ชื่อโครงการ (English)</th>
+                    <th>ผู้รับผิดชอบ</th>
+                    <th>สังกัด</th>
+                    <th>วันที่เริ่มโครงการ</th>
+                    <th>วันที่สิ้นสุดโครงการ</th>
+                    <th>งบประมาณ</th>
+                    <th>กำหนดส่ง</th>
+                    <th class="text-center">สถานะ</th>
+                    <th class="text-end">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in projects %}
+                <tr>
+                    <td><span class="project-title-th">{{ p.project_th }}</span></td>
+                    <td><span class="project-title-en text-muted">{{ p.project_en if p.project_en else '-' }}</span></td>
+                    <td class="small"><i class="bi bi-person-circle me-1 text-muted"></i> {{ p.researcher_name }}</td>
+                    <td><span class="badge bg-light text-dark border fw-normal">{{ p.affiliation }}</span></td>
+                    <td class="small text-muted">{{ p.start_date if p.start_date else '-' }}</td>
+                    <td class="small text-muted">{{ p.end_date if p.end_date else '-' }}</td>
+                    <td class="fw-bold text-primary">{{ "{:,.0f}".format(p.funding) if p.funding and p.funding > 0 else '-' }}</td>
+                    <td class="small text-muted">{{ p.deadline }}</td>
+                    <td class="text-center"><span class="badge bg-soft-secondary">{{ p.status_text }}</span></td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-1">
+                            <form method="POST" action="{{ url_for('research.send_project_alert', pid=p.id) }}">
+                                <button class="btn btn-warning btn-action text-white"><i class="bi bi-envelope-fill"></i></button>
+                            </form>
+                            <form method="POST" action="{{ url_for('research.delete_project', pid=p.id) }}">
+                                <button class="btn btn-light btn-action text-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<script>
+const loader = document.getElementById("page-loader");
+window.addEventListener("load", () => setTimeout(() => loader.classList.add("hide"), 300));
+</script>
 
 </body>
 </html>
