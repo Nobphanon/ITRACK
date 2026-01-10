@@ -31,6 +31,10 @@ def get_smart_df(path, sheet=None):
     """
     raw_df = None
     try:
+        # Default to first sheet if not specified
+        if sheet is None:
+            sheet = 0
+
         # 1. Load Data with Maximum Tolerance
         if path.lower().endswith('.csv'):
             for enc in ['utf-8-sig', 'cp874', 'tis-620', 'utf-8', 'latin1']:
@@ -126,5 +130,17 @@ def get_smart_df(path, sheet=None):
         return df
 
     except Exception as e:
-        print(f"Smart Repair Failed: {e}")
-        return pd.DataFrame()
+        print(f"❌ Smart Repair Failed: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Failsafe: Try standard read if smart repair crashes
+        try:
+            print("⚠️ Attempting Failsafe Read...")
+            if path.lower().endswith('.csv'):
+                return pd.read_csv(path)
+            else:
+                return pd.read_excel(path)
+        except Exception as e2:
+            print(f"❌ Failsafe Failed: {e2}")
+            return pd.DataFrame()
