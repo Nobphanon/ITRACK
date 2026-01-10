@@ -74,10 +74,14 @@ def upload():
     file.save(path)
 
     try:
-        if filename.lower().endswith(('.xlsx', '.xls')):
-            xl = pd.ExcelFile(path)
+        if filename.lower().endswith('.xls'):
+            xl = pd.ExcelFile(path, engine='xlrd')
+            session["sheets"] = xl.sheet_names
+        elif filename.lower().endswith('.xlsx'):
+            xl = pd.ExcelFile(path, engine='openpyxl')
             session["sheets"] = xl.sheet_names
         else:
+            # CSV or other formats
             session["sheets"] = ["CSV_File"]
 
         session["excel_path"] = path
