@@ -306,20 +306,24 @@
                         <form action="{{ url_for('research.map_columns') }}" method="POST">
                             <div class="row g-3">
                                 {% for f, l, icon, hint in [
-                                ('project_th', 'ชื่อโครงการ (ภาษาไทย)', 'กขค', 'ระบุชื่อหลักที่เป็นภาษาไทยของงานวิจัย'),
-                                ('project_en', 'ชื่อโครงการ (English)', 'abc', 'ระบุชื่อแปลภาษาอังกฤษ (ถ้ามี)'),
-                                ('researcher_name', 'ชื่อผู้วิจัย/ผู้รับผิดชอบ', 'bi-person-vcard',
+                                ('project_th', 'ชื่อโครงการ (ภาษาไทย)', 'bi-type',
+                                'ระบุชื่อหลักที่เป็นภาษาไทยของงานวิจัย'),
+                                ('project_en', 'ชื่อโครงการ (English)', 'bi-translate', 'ระบุชื่อแปลภาษาอังกฤษ
+                                (ถ้ามี)'),
+                                ('researcher_name', 'ชื่อผู้วิจัย/ผู้รับผิดชอบ', 'bi-person-badge',
                                 'ชื่อหัวหน้าโครงการหรือคณะผู้จัดทำ'),
-
                                 ('researcher_email', 'อีเมลติดต่อ (สำคัญ)', 'bi-envelope-at',
                                 'ระบุคอลัมน์ที่มีอีเมลสำหรับแจ้งเตือน'),
+
+                                ('start_date', 'วันที่เริ่มโครงการ', 'bi-calendar-event', 'ระบุวันเริ่มต้นสัญญา'),
+                                ('end_date', 'วันที่สิ้นสุดโครงการ', 'bi-calendar-check', 'ระบุวันสิ้นสุดสัญญา'),
 
                                 ('affiliation', 'สังกัด / หน่วยงาน', 'bi-building-gear', 'คณะ สถาบัน
                                 หรือกองงานที่สังกัด'),
                                 ('funding', 'งบประมาณที่ได้รับ (บาท)', 'bi-currency-dollar',
                                 'ระบุยอดเงินทุนสนับสนุนงานวิจัย'),
-                                ('deadline', 'วันสิ้นสุดโครงการ / กำหนดส่ง', 'bi-calendar-check',
-                                'วันที่สิ้นสุดหรือวันครบกำหนดส่งรายงาน')
+                                ('deadline', 'กำหนดส่งงาน (Deadline)', 'bi-alarm', 'วันที่ครบกำหนดส่งงาน
+                                (ใช้แจ้งเตือน)')
                                 ] %}
                                 <div class="col-md-6">
                                     <div class="mapping-item">
