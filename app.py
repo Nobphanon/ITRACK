@@ -34,7 +34,7 @@ login_manager.login_view = "auth.login"
 def load_user(user_id):
     conn = get_db()
     u = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
+    # conn.close() - REMOVED: Managed by teardown_appcontext
     if u:
         return User(u['id'], u['username'], u['email'], u['role'])
     return None
