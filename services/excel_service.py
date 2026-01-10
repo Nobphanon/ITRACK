@@ -15,8 +15,12 @@ def get_smart_df(path, sheet=None):
                     break
                 except:
                     continue
+        elif path.lower().endswith('.xls'):
+            # Legacy Excel support via xlrd
+            raw_df = pd.read_excel(path, sheet_name=sheet, header=None, engine='xlrd')
         else:
-            raw_df = pd.read_excel(path, sheet_name=sheet, header=None)
+            # Modern Excel support via openpyxl (default)
+            raw_df = pd.read_excel(path, sheet_name=sheet, header=None, engine='openpyxl')
 
         if raw_df is None or raw_df.empty:
             return pd.DataFrame()
