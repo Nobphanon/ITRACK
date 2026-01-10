@@ -44,7 +44,11 @@ def get_smart_df(path, sheet=None):
 
         df.columns = clean_cols
         df = df.iloc[1:]
-        df = df.dropna(how='all').fillna("")
+        
+        # Robust dropna: Drop rows where all elements are null or empty strings
+        df = df.replace(r'^\s*$', pd.NA, regex=True)
+        df = df.dropna(how='all')
+        df = df.fillna("")
 
         # Normalize data
         try:

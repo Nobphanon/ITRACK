@@ -106,10 +106,33 @@ def preview_sheet():
 
     return redirect(url_for("research.landing"))
 
+def parse_date(val):
+    """
+    Robust date parser handling Thai years, various separators, and formats.
+    Returns: YYYY-MM-DD string or empty string.
+    """
+    if not val or pd.isna(val) or str(val).strip() == "":
+        return ""
+        
+    s = str(val).strip()
+    
+    # Try pandas parsing first (handles standard formats)
+    try:
+        dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
+        if not pd.isna(dt):
+            # Check for Thai year (e.g., 2567 -> 2024)
+            if dt.year > 2400:
+                dt = dt.replace(year=dt.year - 543)
+            return dt.strftime("%Y-%m-%d")
+    except:
+        pass
+
+    return ""
+
 @research_bp.route("/map-columns", methods=["POST"])
 @login_required
 def map_columns():
-    fields = ["project_th", "project_en", "researcher_name", "researcher_email", "affiliation", "funding", "deadline"]
+    fields = ["project_th", "project_en", "researcher_name", "researcher_email", "affiliation", "funding", "deadline", "start_date", "end_date"]
     mapping = {f: request.form.get(f) for f in fields}
 
     # 🛑 MAPPING VALIDATION PATCH
@@ -135,12 +158,18 @@ def map_columns():
                 clean_f = re.sub(r'[^\d.]', '', str(r[f_col]))
                 fund = float(clean_f) if clean_f else 0
 
-            dl_str = ""
-            d_col = mapping.get("deadline")
-            if d_col and d_col in r:
-                dt = pd.to_datetime(r[d_col], errors="coerce")
-                if not pd.isna(dt):
-                    dl_str = dt.strftime("%Y-%m-%d")
+            # Date Fields
+            deadline_str = ""
+            if mapping.get("deadline") in r:
+                deadline_str = parse_date(r[mapping.get("deadline")])
+                
+            start_str = ""
+            if mapping.get("start_date") in r:
+                start_str = parse_date(r[mapping.get("start_date")])
+
+            end_str = ""
+            if mapping.get("end_date") in r:
+                end_str = parse_date(r[mapping.get("end_date")])
 
             email_val = ""
             e_col = mapping.get("researcher_email")
@@ -148,14 +177,14 @@ def map_columns():
                 email_val = str(r[e_col]).strip()
 
             conn.execute("""INSERT INTO research_projects
-                (project_th, project_en, researcher_name, researcher_email, affiliation, funding, deadline)
-                VALUES (?,?,?,?,?,?,?)""",
+                (project_th, project_en, researcher_name, researcher_email, affiliation, funding, deadline, start_date, end_date)
+                VALUES (?,?,?,?,?,?,?,?,?)""",
                 (str(r.get(mapping.get("project_th"), "")),
                  str(r.get(mapping.get("project_en"), "")),
                  str(r.get(mapping.get("researcher_name"), "")),
                  email_val,
                  str(r.get(mapping.get("affiliation"), "")),
-                 fund, dl_str))
+                 fund, deadline_str, start_str, end_str))
 
             count += 1
         except Exception as e:

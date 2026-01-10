@@ -53,9 +53,20 @@ def init_db():
             researcher_email TEXT,
             affiliation TEXT,
             funding REAL,
-            deadline TEXT
+            deadline TEXT,
+            start_date TEXT,
+            end_date TEXT
         )
     """)
+
+    # Check for missing columns (Migration)
+    cur = conn.execute("PRAGMA table_info(research_projects)")
+    columns = [row['name'] for row in cur.fetchall()]
+    
+    if 'start_date' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN start_date TEXT")
+    if 'end_date' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN end_date TEXT")
 
     # ---------- Users ----------
     conn.execute("""
