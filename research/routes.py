@@ -76,18 +76,32 @@ def upload():
     try:
         if filename.lower().endswith('.xls'):
             xl = pd.ExcelFile(path, engine='xlrd')
-            session["sheets"] = xl.sheet_names
         elif filename.lower().endswith('.xlsx'):
             xl = pd.ExcelFile(path, engine='openpyxl')
-            session["sheets"] = xl.sheet_names
         else:
-            # CSV or other formats
+            xl = None
             session["sheets"] = ["CSV_File"]
 
-        session["excel_path"] = path
-        flash('อัปโหลดไฟล์สำเร็จ! กรุณาเลือก Sheet ที่ต้องการ', 'success')
+        if xl:
+            session["sheets"] = xl.sheet_names
+            
     except Exception as e:
-        flash(f'ไฟล์มีปัญหา: {e}', 'danger')
+        print(f"⚠️ Error reading sheets: {e}")
+        # 🔧 Attempt Auto-Repair
+        from services.excel_service import repair_excel
+        repaired_path = repair_excel(path)
+        
+        if repaired_path:
+             try:
+                 xl = pd.ExcelFile(repaired_path, engine='openpyxl')
+                 session["sheets"] = xl.sheet_names
+                 session["excel_path"] = repaired_path # Update to use repaired file
+                 flash('ระบบได้ทำการซ่อมแซมไฟล์และอ่านข้อมูลสำเร็จ', 'success')
+                 return redirect(url_for("research.landing"))
+             except Exception as e2:
+                 flash(f'ไม่สามารถอ่านไฟล์ได้แม้จะซ่อมแซมแล้ว: {e2}', 'danger')
+        else:
+             flash(f'ไฟล์มีปัญหา: {e}', 'danger')
 
     return redirect(url_for("research.landing"))
 
