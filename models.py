@@ -5,18 +5,42 @@ from werkzeug.security import generate_password_hash
 DB_NAME = "database.db"
 
 class User(UserMixin):
+    """
+    User model class for Flask-Login integration.
+    """
     def __init__(self, id, username, email, role):
         self.id = id
         self.username = username
         self.email = email
         self.role = role
 
+from flask import g
+
 def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """
+    Establish a connection to the SQLite database.
+    Stores connection in Flask g object.
+    Returns:
+        sqlite3.Connection: Database connection object with Row factory.
+    """
+    if 'db' not in g:
+        g.db = sqlite3.connect(DB_NAME)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+def close_db(e=None):
+    """
+    Close the database connection if it exists.
+    """
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def init_db():
+    """
+    Initialize the database with required tables (research_projects, users).
+    Also creates a default admin user if not exists.
+    """
     conn = get_db()
 
     # ---------- Projects ----------

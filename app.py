@@ -2,31 +2,30 @@ import os
 from datetime import datetime
 from flask import Flask
 from flask_login import LoginManager
-from models import init_db, get_db, User
 from dotenv import load_dotenv
 
+from models import init_db, get_db, close_db, User
+from auth.routes import auth_bp
+from research.routes import research_bp
+from notifications.scheduler import notify_deadlines
+
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['SESSION_PERMANENT'] = False
 
-# =========================================================
-# 📧 SendGrid Configuration (SAFE)
-# =========================================================
+# SendGrid Configuration
 app.config['SENDGRID_API_KEY'] = os.getenv("SENDGRID_API_KEY")
 app.config['MAIL_SENDER'] = os.getenv("MAIL_SENDER")
 
 if not app.config['SENDGRID_API_KEY'] or not app.config['MAIL_SENDER']:
     print("⚠️ WARNING: SendGrid environment variables not configured")
-
 else:
-    print("📨 SendGrid ready:")
-    print("  Sender:", app.config['MAIL_SENDER'])
+    print(f"📨 SendGrid ready. Sender: {app.config['MAIL_SENDER']}")
 
-# =========================================================
-# 🔐 Login Manager
-# =========================================================
+# Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
@@ -40,25 +39,19 @@ def load_user(user_id):
         return User(u['id'], u['username'], u['email'], u['role'])
     return None
 
-# =========================================================
-# 🚀 Blueprints (CASE FIX)
-# =========================================================
-from auth.routes import auth_bp
-from research.routes import research_bp   # <-- สำคัญ: เปลี่ยน Research -> research
-
+# Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(research_bp)
 
-# =========================================================
-# 🧱 Database Initialization
-# =========================================================
+# Database Initialization
 with app.app_context():
     init_db()
 
-# =========================================================
-# ⏰ Scheduler Endpoint
-# =========================================================
-from notifications.scheduler import notify_deadlines
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    close_db(exception)
+
+# Scheduler Endpoint
 
 @app.route('/cron/check-deadlines', methods=['GET', 'POST'])
 def check_deadlines_endpoint():
@@ -76,9 +69,7 @@ def check_deadlines_endpoint():
             'timestamp': datetime.now().isoformat()
         }, 500
 
-# =========================================================
-# 🚀 Run
-# =========================================================
+# Run Application
 if __name__ == "__main__":
     app.run(
         host='0.0.0.0',

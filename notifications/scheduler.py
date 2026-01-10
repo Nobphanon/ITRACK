@@ -51,6 +51,6 @@ def notify_deadlines():
             logger.error(f"Error processing project {row['id']}: {e}")
             continue
 
-    conn.close()
+    # conn.close()
     logger.info(f"✅ Job finished. Sent {count_sent} emails.")
     return count_sent

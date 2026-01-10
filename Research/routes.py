@@ -2,78 +2,19 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from flask_login import login_required, current_user
 import pandas as pd
 import os
-import re
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from models import get_db
+from services.excel_service import get_smart_df
 
 # ✅ Import ฟังก์ชันส่งเมล
 from notifications.email_service import send_alert_email
+import re
 
 research_bp = Blueprint("research", __name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ---------------------------------------------------------
-# 🛠️ Helper: Smart Reader (PATCHED)
-# ---------------------------------------------------------
-def get_smart_df(path, sheet=None):
-    raw_df = None
-    try:
-        if path.lower().endswith('.csv'):
-            for enc in ['utf-8-sig', 'tis-620', 'cp874', 'utf-8']:
-                try:
-                    raw_df = pd.read_csv(path, header=None, encoding=enc, skip_blank_lines=True)
-                    break
-                except:
-                    continue
-        else:
-            raw_df = pd.read_excel(path, sheet_name=sheet, header=None)
-
-        if raw_df is None or raw_df.empty:
-            return pd.DataFrame()
-
-        sample = raw_df.head(20)
-        header_idx = sample.count(axis=1).idxmax()
-        if header_idx == 0:
-            for i in range(len(sample)):
-                filled = sample.iloc[i].notna().sum()
-                if filled >= len(sample.columns) * 0.5:
-                    header_idx = i
-                    break
-        df = raw_df.iloc[header_idx:].reset_index(drop=True)
-
-        clean_cols = []
-        for c in df.iloc[0]:
-            c_str = re.sub(r'\s+', ' ', str(c)).strip()
-            if not c_str or "Unnamed" in c_str or c_str.lower() == "nan":
-                clean_cols.append(f"Field_{len(clean_cols)+1}")
-            else:
-                clean_cols.append(c_str)
-
-        df.columns = clean_cols
-        df = df.iloc[1:]
-        df = df.dropna(how='all').fillna("")
-
-        try:
-            df = df.map(lambda x: str(x).strip() if x is not None else "")
-        except AttributeError:
-            df = df.applymap(lambda x: str(x).strip() if x is not None else "")
-
-        # 🔥 FINAL NORMALIZATION PATCH
-        df.columns = (
-            df.columns.astype(str)
-            .str.replace('\n', ' ')
-            .str.replace('\r', ' ')
-            .str.replace(r'\s+', ' ', regex=True)
-            .str.strip()
-        )
-
-        return df
-
-    except Exception as e:
-        print(f"Smart Reader Error: {e}")
-        return pd.DataFrame()
 
 # ---------------------------------------------------------
 # 🚀 Routes
@@ -87,7 +28,7 @@ def landing():
         deadlines = conn.execute("SELECT deadline FROM research_projects").fetchall()
     except:
         deadlines = []
-    conn.close()
+    # conn.close()
 
     today = datetime.today().date()
     on_track = near_deadline = overdue = 0
@@ -190,6 +131,7 @@ def map_columns():
             fund = 0
             f_col = mapping.get("funding")
             if f_col and f_col in r:
+                # import re moved to top
                 clean_f = re.sub(r'[^\d.]', '', str(r[f_col]))
                 fund = float(clean_f) if clean_f else 0
 
@@ -221,7 +163,7 @@ def map_columns():
             continue
 
     conn.commit()
-    conn.close()
+    # conn.close()
 
     session.pop("sheets", None)
     session.pop("columns", None)
