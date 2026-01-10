@@ -171,3 +171,111 @@ def map_columns():
 
     flash(f'บันทึกข้อมูลสำเร็จ {count} รายการ!', 'success')
     return redirect(url_for("research.landing"))
+
+# ---------------------------------------------------------
+# 📊 Dashboard & Management Routes
+# ---------------------------------------------------------
+
+@research_bp.route("/dashboard")
+@login_required
+def dashboard():
+    conn = get_db()
+    
+    # Filters
+    q = request.args.get("q", "").strip()
+    aff = request.args.get("aff", "").strip()
+    status = request.args.get("status", "").strip()
+
+    # Base Query
+    sql = "SELECT * FROM research_projects WHERE 1=1"
+    params = []
+
+    if q:
+        sql += " AND (project_th LIKE ? OR researcher_name LIKE ? OR affiliation LIKE ?)"
+        params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
+    
+    if aff:
+        sql += " AND affiliation = ?"
+        params.append(aff)
+
+    rows = conn.execute(sql, params).fetchall()
+    
+    # Get distinct affiliations for filter
+    aff_rows = conn.execute("SELECT DISTINCT affiliation FROM research_projects WHERE affiliation != '' ORDER BY affiliation").fetchall()
+    aff_list = [r['affiliation'] for r in aff_rows]
+    
+    today = datetime.today().date()
+    projects = []
+    
+    for r in rows:
+        p = dict(r)
+        
+        # Calculate Status
+        dt = pd.to_datetime(p['deadline'], errors="coerce")
+        days_left = None
+        status_text = "Unknown"
+        
+        if not pd.isna(dt):
+            days_left = (dt.date() - today).days
+            if days_left < 0:
+                status_text = "Overdue"
+            elif days_left <= 7:
+                status_text = "Near Deadline"
+            else:
+                status_text = "On Track"
+        
+        # Status Filter
+        if status and status != status_text:
+            continue
+            
+        p['status_text'] = status_text
+        projects.append(p)
+
+    return render_template("research/dashboard.html",
+                           projects=projects,
+                           total=len(projects),
+                           q=q,
+                           aff=aff,
+                           status_filter=status,
+                           aff_list=aff_list)
+
+@research_bp.route("/delete/<int:pid>", methods=["POST"])
+@login_required
+def delete_project(pid):
+    conn = get_db()
+    conn.execute("DELETE FROM research_projects WHERE id = ?", (pid,))
+    conn.commit()
+    flash("ลบโครงการเรียบร้อยแล้ว", "success")
+    return redirect(url_for("research.dashboard"))
+
+@research_bp.route("/clear-all", methods=["POST"])
+@login_required
+def clear_all():
+    conn = get_db()
+    conn.execute("DELETE FROM research_projects")
+    conn.commit()
+    flash("ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว", "warning")
+    return redirect(url_for("research.dashboard"))
+
+@research_bp.route("/alert/<int:pid>", methods=["POST"])
+@login_required
+def send_project_alert(pid):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM research_projects WHERE id = ?", (pid,)).fetchone()
+    
+    if row and row['researcher_email']:
+        # Mock calculation of days left
+        days_left = 0
+        dt = pd.to_datetime(row['deadline'], errors="coerce")
+        if not pd.isna(dt):
+             days_left = (dt.date() - datetime.today().date()).days
+        
+        success, msg = send_alert_email(row['researcher_email'], row['project_th'], days_left)
+        if success:
+            flash(f"ส่งเมลแจ้งเตือนไปยัง {row['researcher_email']} แล้ว", "success")
+        else:
+            flash(f"ส่งเมลไม่สำเร็จ: {msg}", "danger")
+    else:
+        flash("ไม่พบข้อมูลอีเมลหรือโครงการ", "warning")
+        
+    return redirect(url_for("research.dashboard"))
