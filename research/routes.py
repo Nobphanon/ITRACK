@@ -10,6 +10,7 @@ from services.excel_service import get_smart_df
 # ✅ Import ฟังก์ชันส่งเมล
 from notifications.email_service import send_alert_email
 import re
+from audit.service import log_project_action, log_action
 
 research_bp = Blueprint("research", __name__)
 UPLOAD_FOLDER = "uploads"
@@ -81,9 +82,11 @@ def upload():
         else:
             xl = None
             session["sheets"] = ["CSV_File"]
+            session["excel_path"] = path  # ✅ FIX: Save path for CSV files too
 
         if xl:
             session["sheets"] = xl.sheet_names
+            session["excel_path"] = path  # ✅ FIX: Save path after successful Excel read
             
     except Exception as e:
         print(f"⚠️ Error reading sheets: {e}")
@@ -216,6 +219,7 @@ def map_columns():
     session.pop("columns", None)
     session.pop("rows", None)
 
+    log_project_action("PROJECTS_IMPORTED", details=f"Imported {count} projects")
     flash(f'บันทึกข้อมูลสำเร็จ {count} รายการ!', 'success')
     return redirect(url_for("research.landing"))
 
@@ -290,17 +294,30 @@ def dashboard():
 @login_required
 def delete_project(pid):
     conn = get_db()
+    # Get project name before deleting for audit log
+    project = conn.execute("SELECT project_th FROM research_projects WHERE id = ?", (pid,)).fetchone()
+    project_name = project['project_th'] if project else 'Unknown'
+    
     conn.execute("DELETE FROM research_projects WHERE id = ?", (pid,))
     conn.commit()
+    log_project_action("PROJECT_DELETED", project_id=pid, details=f"Deleted: {project_name}")
     flash("ลบโครงการเรียบร้อยแล้ว", "success")
     return redirect(url_for("research.dashboard"))
 
 @research_bp.route("/clear-all", methods=["POST"])
 @login_required
 def clear_all():
+    # Admin only check
+    if current_user.role != 'admin':
+        flash("คุณไม่มีสิทธิ์ในการดำเนินการนี้", "danger")
+        return redirect(url_for("research.dashboard"))
+    
     conn = get_db()
+    # Get count before clearing for audit
+    count = conn.execute("SELECT COUNT(*) as cnt FROM research_projects").fetchone()['cnt']
     conn.execute("DELETE FROM research_projects")
     conn.commit()
+    log_action("DATA_CLEARED", target_type="project", details=f"Cleared {count} projects")
     flash("ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว", "warning")
     return redirect(url_for("research.dashboard"))
 
@@ -326,3 +343,52 @@ def send_project_alert(pid):
         flash("ไม่พบข้อมูลอีเมลหรือโครงการ", "warning")
         
     return redirect(url_for("research.dashboard"))
+
+# ---------------------------------------------------------
+# 📝 Edit Project
+# ---------------------------------------------------------
+
+@research_bp.route("/edit/<int:pid>", methods=["GET", "POST"])
+@login_required
+def edit_project(pid):
+    conn = get_db()
+    
+    if request.method == "POST":
+        # Update project data
+        conn.execute("""
+            UPDATE research_projects SET
+                project_th = ?,
+                project_en = ?,
+                researcher_name = ?,
+                researcher_email = ?,
+                affiliation = ?,
+                funding = ?,
+                start_date = ?,
+                end_date = ?,
+                deadline = ?
+            WHERE id = ?
+        """, (
+            request.form.get('project_th', ''),
+            request.form.get('project_en', ''),
+            request.form.get('researcher_name', ''),
+            request.form.get('researcher_email', ''),
+            request.form.get('affiliation', ''),
+            float(request.form.get('funding') or 0),
+            request.form.get('start_date', ''),
+            request.form.get('end_date', ''),
+            request.form.get('deadline', ''),
+            pid
+        ))
+        conn.commit()
+        log_project_action("PROJECT_UPDATED", project_id=pid, details=f"Updated: {request.form.get('project_th', '')}")
+        flash("บันทึกการแก้ไขเรียบร้อยแล้ว", "success")
+        return redirect(url_for("research.dashboard"))
+    
+    # GET - Show edit form
+    project = conn.execute("SELECT * FROM research_projects WHERE id = ?", (pid,)).fetchone()
+    if not project:
+        flash("ไม่พบโครงการที่ต้องการแก้ไข", "warning")
+        return redirect(url_for("research.dashboard"))
+    
+    return render_template("research/edit.html", project=project)
+

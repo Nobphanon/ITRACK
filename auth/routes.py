@@ -2,12 +2,15 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import get_db, User
+from extensions import limiter
+from audit.service import log_login_attempt, log_action
 
 auth_bp = Blueprint('auth', __name__)
 
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     """
     Handle user login.
@@ -28,6 +31,7 @@ def login():
         # conn.close() removed (handled by teardown)
 
         if not user_row:
+            log_login_attempt(username, success=False)
             flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
             return render_template("auth/login.html")
 
@@ -36,8 +40,10 @@ def login():
         if check_password_hash(hashed, pw):
             user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
             login_user(user)
+            log_login_attempt(username, success=True)
             return redirect(url_for('research.landing'))
 
+        log_login_attempt(username, success=False)
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
 
     return render_template("auth/login.html")
@@ -50,6 +56,7 @@ def logout():
     """
     Handle user logout.
     """
+    log_action("LOGOUT")
     logout_user()
     return redirect(url_for('auth.login'))
 
@@ -87,6 +94,7 @@ def change_password():
         conn.commit()
         # conn.close()
 
+        log_action("PASSWORD_CHANGED")
         flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
         return redirect(url_for('research.landing'))
 

@@ -1,6 +1,10 @@
 import sqlite3
+import os
+import logging
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash
+
+logger = logging.getLogger(__name__)
 
 DB_NAME = "database.db"
 
@@ -79,14 +83,40 @@ def init_db():
         )
     """)
 
+    # ---------- Audit Logs ----------
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            user_id INTEGER,
+            username TEXT,
+            action TEXT NOT NULL,
+            target_type TEXT,
+            target_id INTEGER,
+            details TEXT,
+            ip_address TEXT
+        )
+    """)
+
     # ---------- Default Admin ----------
     cur = conn.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cur.fetchone():
-        hashed_pw = generate_password_hash("1234")
+        # Read password from environment variable (fallback to secure random if not set)
+        default_password = os.getenv('DEFAULT_ADMIN_PASSWORD')
+        if not default_password:
+            import secrets
+            default_password = secrets.token_urlsafe(16)
+            logger.warning(f"⚠️ DEFAULT_ADMIN_PASSWORD not set. Generated random password: {default_password}")
+            logger.warning("⚠️ Please save this password and set DEFAULT_ADMIN_PASSWORD in .env")
+        
+        hashed_pw = generate_password_hash(default_password)
+        admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@itrack.local')
+        
         conn.execute("""
             INSERT INTO users (username, password, email, role)
             VALUES (?, ?, ?, ?)
-        """, ("admin", hashed_pw, "admin@test.com", "admin"))
+        """, ("admin", hashed_pw, admin_email, "admin"))
+        logger.info(f"✅ Created default admin user with email: {admin_email}")
 
     conn.commit()
-    conn.close()
+

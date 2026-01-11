@@ -1,13 +1,12 @@
 import requests
 import logging
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
 SENDGRID_API = "https://api.sendgrid.com/v3/mail/send"
 
 def send_alert_email(to_email, project_name, days_left):
-    from app import app
-
     subject = "แจ้งเตือนกำหนดส่งโครงการวิจัย"
 
     content = f"""
@@ -30,7 +29,7 @@ ITRACK Research Monitoring System
         "personalizations": [{
             "to": [{"email": to_email}]
         }],
-        "from": {"email": app.config['MAIL_SENDER']},
+        "from": {"email": current_app.config['MAIL_SENDER']},
         "subject": subject,
         "content": [{
             "type": "text/plain",
@@ -39,7 +38,7 @@ ITRACK Research Monitoring System
     }
 
     headers = {
-        "Authorization": f"Bearer {app.config['SENDGRID_API_KEY']}",
+        "Authorization": f"Bearer {current_app.config['SENDGRID_API_KEY']}",
         "Content-Type": "application/json"
     }
 
@@ -51,3 +50,4 @@ ITRACK Research Monitoring System
     else:
         logger.error(f"❌ SendGrid error: {r.text}")
         return False, r.text
+
