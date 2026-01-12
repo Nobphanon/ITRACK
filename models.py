@@ -101,13 +101,8 @@ def init_db():
     # ---------- Default Admin ----------
     cur = conn.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cur.fetchone():
-        # Read password from environment variable (fallback to secure random if not set)
-        default_password = os.getenv('DEFAULT_ADMIN_PASSWORD')
-        if not default_password:
-            import secrets
-            default_password = secrets.token_urlsafe(16)
-            logger.warning(f"⚠️ DEFAULT_ADMIN_PASSWORD not set. Generated random password: {default_password}")
-            logger.warning("⚠️ Please save this password and set DEFAULT_ADMIN_PASSWORD in .env")
+        # Read password from environment variable (fallback to #123 if not set)
+        default_password = os.getenv('DEFAULT_ADMIN_PASSWORD', '#123')
         
         hashed_pw = generate_password_hash(default_password)
         admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@itrack.local')
