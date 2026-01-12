@@ -59,7 +59,8 @@ def init_db():
             funding REAL,
             deadline TEXT,
             start_date TEXT,
-            end_date TEXT
+            end_date TEXT,
+            status TEXT DEFAULT 'draft'
         )
     """)
 
@@ -71,6 +72,8 @@ def init_db():
         conn.execute("ALTER TABLE research_projects ADD COLUMN start_date TEXT")
     if 'end_date' not in columns:
         conn.execute("ALTER TABLE research_projects ADD COLUMN end_date TEXT")
+    if 'status' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN status TEXT DEFAULT 'draft'")
 
     # ---------- Users ----------
     conn.execute("""

@@ -167,6 +167,24 @@
                             <input type="date" class="form-control form-control-edit" name="deadline"
                                 value="{{ project.deadline or '' }}">
                         </div>
+                        <div class="col-md-12">
+                            <label class="form-label">สถานะโครงการ</label>
+                            <select class="form-control form-control-edit" name="status">
+                                <option value="draft" {% if project.status=='draft' or not project.status %}selected{%
+                                    endif %}>
+                                    📝 Draft - ร่าง
+                                </option>
+                                <option value="in_progress" {% if project.status=='in_progress' %}selected{% endif %}>
+                                    🔄 In Progress - กำลังดำเนินการ
+                                </option>
+                                <option value="under_review" {% if project.status=='under_review' %}selected{% endif %}>
+                                    👀 Under Review - อยู่ระหว่างตรวจสอบ
+                                </option>
+                                <option value="completed" {% if project.status=='completed' %}selected{% endif %}>
+                                    ✅ Completed - เสร็จสิ้น
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-3 mt-4 pt-3 border-top border-secondary">

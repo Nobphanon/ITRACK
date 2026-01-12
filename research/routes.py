@@ -25,38 +25,90 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @login_required
 def landing():
     conn = get_db()
+    
+    # Fetch all projects for display and analytics
     try:
-        deadlines = conn.execute("SELECT deadline FROM research_projects").fetchall()
+        projects = conn.execute("""
+            SELECT id, project_th, researcher_name, researcher_email, 
+                   affiliation, funding, deadline, start_date, end_date, status
+            FROM research_projects
+            ORDER BY deadline ASC
+        """).fetchall()
     except:
-        deadlines = []
-    # conn.close()
-
+        projects = []
+    
     today = datetime.today().date()
     on_track = near_deadline = overdue = 0
     next_deadline = None
-
-    for row in deadlines:
-        dt = pd.to_datetime(row['deadline'], errors="coerce")
-        if pd.isna(dt):
-            continue
-        days_left = (dt.date() - today).days
-
-        if days_left < 0:
-            overdue += 1
-        elif days_left <= 7:
-            near_deadline += 1
+    
+    # Status counts for chart
+    status_counts = {'draft': 0, 'in_progress': 0, 'under_review': 0, 'completed': 0}
+    
+    # Funding by affiliation for chart
+    funding_by_affiliation = {}
+    total_funding = 0
+    
+    project_list = []
+    
+    for row in projects:
+        # Calculate deadline status
+        deadline_status = 'no_deadline'
+        days_left = None
+        
+        if row['deadline']:
+            dt = pd.to_datetime(row['deadline'], errors="coerce")
+            if not pd.isna(dt):
+                days_left = (dt.date() - today).days
+                
+                if days_left < 0:
+                    overdue += 1
+                    deadline_status = 'overdue'
+                elif days_left <= 7:
+                    near_deadline += 1
+                    deadline_status = 'near_deadline'
+                else:
+                    on_track += 1
+                    deadline_status = 'on_track'
+                
+                if days_left >= 0:
+                    next_deadline = days_left if next_deadline is None else min(next_deadline, days_left)
+        
+        # Count by status
+        status = row['status'] or 'draft'
+        if status in status_counts:
+            status_counts[status] += 1
         else:
-            on_track += 1
-
-        if days_left >= 0:
-            next_deadline = days_left if next_deadline is None else min(next_deadline, days_left)
-
+            status_counts['draft'] += 1
+        
+        # Sum funding by affiliation
+        affiliation = row['affiliation'] or 'ไม่ระบุ'
+        funding = row['funding'] or 0
+        funding_by_affiliation[affiliation] = funding_by_affiliation.get(affiliation, 0) + funding
+        total_funding += funding
+        
+        # Build project list for display
+        project_list.append({
+            'id': row['id'],
+            'project_th': row['project_th'] or '-',
+            'researcher_name': row['researcher_name'] or '-',
+            'affiliation': affiliation,
+            'funding': funding,
+            'deadline': row['deadline'],
+            'days_left': days_left,
+            'deadline_status': deadline_status,
+            'status': status
+        })
+    
     return render_template("research/index.html",
-                           total=len(deadlines),
+                           total=len(projects),
                            on_track=on_track,
                            near_deadline=near_deadline,
                            overdue=overdue,
                            next_deadline=next_deadline,
+                           total_funding=total_funding,
+                           status_counts=status_counts,
+                           funding_by_affiliation=funding_by_affiliation,
+                           project_list=project_list,
                            sheets=session.get("sheets"),
                            columns=session.get("columns"),
                            rows=session.get("rows"),
@@ -365,7 +417,8 @@ def edit_project(pid):
                 funding = ?,
                 start_date = ?,
                 end_date = ?,
-                deadline = ?
+                deadline = ?,
+                status = ?
             WHERE id = ?
         """, (
             request.form.get('project_th', ''),
@@ -377,6 +430,7 @@ def edit_project(pid):
             request.form.get('start_date', ''),
             request.form.get('end_date', ''),
             request.form.get('deadline', ''),
+            request.form.get('status', 'draft'),
             pid
         ))
         conn.commit()
