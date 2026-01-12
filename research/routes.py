@@ -26,14 +26,42 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def landing():
     conn = get_db()
     
-    # Fetch all projects for display and analytics
+    # Get year filter from request
+    selected_year = request.args.get('year', 'all')
+    
+    # Get list of available years
     try:
-        projects = conn.execute("""
-            SELECT id, project_th, researcher_name, researcher_email, 
-                   affiliation, funding, deadline, start_date, end_date, status
-            FROM research_projects
-            ORDER BY deadline ASC
+        years_result = conn.execute("""
+            SELECT DISTINCT strftime('%Y', start_date) as year 
+            FROM research_projects 
+            WHERE start_date IS NOT NULL AND start_date != ''
+            UNION
+            SELECT DISTINCT strftime('%Y', deadline) as year 
+            FROM research_projects 
+            WHERE deadline IS NOT NULL AND deadline != ''
+            ORDER BY year DESC
         """).fetchall()
+        years_list = [r['year'] for r in years_result if r['year']]
+    except:
+        years_list = []
+    
+    # Fetch projects with optional year filter
+    try:
+        if selected_year != 'all' and selected_year:
+            projects = conn.execute("""
+                SELECT id, project_th, researcher_name, researcher_email, 
+                       affiliation, funding, deadline, start_date, end_date, status
+                FROM research_projects
+                WHERE strftime('%Y', start_date) = ? OR strftime('%Y', deadline) = ?
+                ORDER BY deadline ASC
+            """, (selected_year, selected_year)).fetchall()
+        else:
+            projects = conn.execute("""
+                SELECT id, project_th, researcher_name, researcher_email, 
+                       affiliation, funding, deadline, start_date, end_date, status
+                FROM research_projects
+                ORDER BY deadline ASC
+            """).fetchall()
     except:
         projects = []
     
@@ -109,6 +137,8 @@ def landing():
                            status_counts=status_counts,
                            funding_by_affiliation=funding_by_affiliation,
                            project_list=project_list,
+                           years_list=years_list,
+                           selected_year=selected_year,
                            sheets=session.get("sheets"),
                            columns=session.get("columns"),
                            rows=session.get("rows"),
@@ -117,66 +147,128 @@ def landing():
 @research_bp.route("/upload", methods=["POST"])
 @login_required
 def upload():
+    print("📁 Upload route called!")
     file = request.files.get("file")
     if not file or file.filename == '':
+        print("❌ No file provided")
         flash('กรุณาเลือกไฟล์ก่อนอัปโหลด', 'warning')
         return redirect(url_for("research.landing"))
 
     filename = secure_filename(file.filename)
+    print(f"📄 File received: {filename}")
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
+    print(f"💾 File saved to: {path}")
+    
+    sheets = []
+    error_msg = None
 
     try:
-        if filename.lower().endswith('.xls'):
-            xl = pd.ExcelFile(path, engine='xlrd')
-        elif filename.lower().endswith('.xlsx'):
-            xl = pd.ExcelFile(path, engine='openpyxl')
+        if filename.lower().endswith('.csv'):
+            sheets = ["CSV_File"]
+            session["excel_path"] = path
+        elif filename.lower().endswith('.xls'):
+            # Old Excel format
+            try:
+                xl = pd.ExcelFile(path, engine='xlrd')
+                sheets = xl.sheet_names
+            except Exception as e1:
+                error_msg = f"xlrd error: {e1}"
         else:
-            xl = None
-            session["sheets"] = ["CSV_File"]
-            session["excel_path"] = path  # ✅ FIX: Save path for CSV files too
+            # .xlsx format - try multiple methods
+            try:
+                xl = pd.ExcelFile(path, engine='openpyxl')
+                sheets = xl.sheet_names
+            except Exception as e1:
+                error_msg = f"openpyxl error: {e1}"
+                # Fallback: try without specifying engine
+                try:
+                    xl = pd.ExcelFile(path)
+                    sheets = xl.sheet_names
+                    error_msg = None
+                except Exception as e2:
+                    error_msg = f"Fallback error: {e2}"
 
-        if xl:
-            session["sheets"] = xl.sheet_names
-            session["excel_path"] = path  # ✅ FIX: Save path after successful Excel read
-            
-    except Exception as e:
-        print(f"⚠️ Error reading sheets: {e}")
-        # 🔧 Attempt Auto-Repair
-        from services.excel_service import repair_excel
-        repaired_path = repair_excel(path)
-        
-        if repaired_path:
-             try:
-                 xl = pd.ExcelFile(repaired_path, engine='openpyxl')
-                 session["sheets"] = xl.sheet_names
-                 session["excel_path"] = repaired_path # Update to use repaired file
-                 flash('ระบบได้ทำการซ่อมแซมไฟล์และอ่านข้อมูลสำเร็จ', 'success')
-                 return redirect(url_for("research.landing"))
-             except Exception as e2:
-                 flash(f'ไม่สามารถอ่านไฟล์ได้แม้จะซ่อมแซมแล้ว: {e2}', 'danger')
+        if sheets:
+            session["sheets"] = sheets
+            session["excel_path"] = path
+            flash(f'อัปโหลดสำเร็จ! พบ {len(sheets)} sheet(s): {", ".join(sheets[:5])}', 'success')
         else:
-             flash(f'ไฟล์มีปัญหา: {e}', 'danger')
+            # Try repair
+            from services.excel_service import repair_excel
+            repaired_path = repair_excel(path)
+            
+            if repaired_path:
+                try:
+                    xl = pd.ExcelFile(repaired_path, engine='openpyxl')
+                    session["sheets"] = xl.sheet_names
+                    session["excel_path"] = repaired_path
+                    flash(f'ซ่อมแซมไฟล์สำเร็จ! พบ {len(xl.sheet_names)} sheet(s)', 'success')
+                except Exception as e:
+                    flash(f'ไม่สามารถอ่านได้แม้ซ่อมแซมแล้ว: {e}', 'danger')
+            else:
+                flash(f'ไม่สามารถอ่านไฟล์ได้: {error_msg}', 'danger')
+                
+    except Exception as e:
+        flash(f'เกิดข้อผิดพลาด: {str(e)}', 'danger')
 
     return redirect(url_for("research.landing"))
 
 @research_bp.route("/preview-sheet", methods=["POST"])
 @login_required
 def preview_sheet():
+    import sys
+    import json
+    print("=" * 50, flush=True)
+    print("📊 Preview sheet route called!", flush=True)
     sheet = request.form.get("sheet")
     path = session.get("excel_path")
+    print(f"📄 Sheet: {sheet}", flush=True)
+    print(f"📄 Path: {path}", flush=True)
+    
     if not path:
+        print("❌ No path in session", flush=True)
+        flash('กรุณาอัปโหลดไฟล์ก่อน', 'warning')
         return redirect(url_for("research.landing"))
 
-    df = get_smart_df(path, sheet)
-    if not df.empty:
-        session["columns"] = df.columns.tolist()
-        session["rows"] = df.head(15).values.tolist()
-        session["active_sheet"] = sheet
-        flash(f'โหลดข้อมูลจาก Sheet: {sheet} เรียบร้อย', 'info')
-    else:
-        flash('ไม่พบข้อมูลใน Sheet ที่เลือก', 'warning')
+    try:
+        print(f"🔍 Reading sheet...", flush=True)
+        df = get_smart_df(path, sheet)
+        print(f"📊 DataFrame shape: {df.shape if not df.empty else 'EMPTY'}", flush=True)
+        
+        if not df.empty:
+            cols = df.columns.tolist()
+            # Only store first 5 rows to keep session small!
+            rows = df.head(5).values.tolist()
+            
+            session["columns"] = cols
+            session["active_sheet"] = sheet
+            
+            # Save full preview data to temp file instead of session
+            preview_data = {
+                "columns": cols,
+                "rows": df.head(15).values.tolist()
+            }
+            preview_path = os.path.join(UPLOAD_FOLDER, "preview_data.json")
+            with open(preview_path, 'w', encoding='utf-8') as f:
+                json.dump(preview_data, f, ensure_ascii=False, default=str)
+            session["preview_path"] = preview_path
+            
+            # Store minimal rows in session for quick display
+            session["rows"] = rows
+            
+            print(f"✅ Loaded {len(df)} rows, {len(cols)} columns", flush=True)
+            flash(f'โหลดข้อมูลจาก Sheet: {sheet} สำเร็จ! ({len(df)} แถว, {len(cols)} คอลัมน์)', 'success')
+        else:
+            print("⚠️ DataFrame is empty", flush=True)
+            flash('ไม่พบข้อมูลใน Sheet ที่เลือก', 'warning')
+    except Exception as e:
+        print(f"❌ Error reading sheet: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        flash(f'เกิดข้อผิดพลาดในการอ่าน Sheet: {str(e)}', 'danger')
 
+    print("=" * 50, flush=True)
     return redirect(url_for("research.landing"))
 
 def parse_date(val):
@@ -445,4 +537,245 @@ def edit_project(pid):
         return redirect(url_for("research.dashboard"))
     
     return render_template("research/edit.html", project=project)
+
+
+# ---------------------------------------------------------
+# 📥 Download Template
+# ---------------------------------------------------------
+@research_bp.route("/download-template")
+@login_required
+def download_template():
+    """Generate and download Excel template for quick import"""
+    from flask import Response
+    import io
+    
+    # Create template DataFrame
+    template_data = {
+        'ชื่อโครงการ (TH)': ['ตัวอย่าง: โครงการวิจัย ABC'],
+        'ชื่อโครงการ (EN)': ['Example: Research Project ABC'],
+        'ผู้รับผิดชอบ': ['ชื่อ นามสกุล'],
+        'อีเมล': ['email@example.com'],
+        'สังกัด': ['หน่วยงาน/คณะ'],
+        'งบประมาณ': [100000],
+        'Deadline': ['2024-12-31'],
+        'วันเริ่มโครงการ': ['2024-01-01'],
+        'วันสิ้นสุดโครงการ': ['2024-12-31']
+    }
+    
+    df = pd.DataFrame(template_data)
+    
+    # Write to Excel in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Projects')
+    output.seek(0)
+    
+    return Response(
+        output.getvalue(),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': 'attachment;filename=ITRACK_Template.xlsx'}
+    )
+
+
+# ---------------------------------------------------------
+# ⚡ Quick Import (Template-Based with Upsert)
+# ---------------------------------------------------------
+@research_bp.route("/quick-import", methods=["POST"])
+@login_required
+def quick_import():
+    """Quick import from template with upsert logic"""
+    if 'file' not in request.files:
+        flash("กรุณาเลือกไฟล์", "warning")
+        return redirect(url_for("research.landing"))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash("กรุณาเลือกไฟล์", "warning")
+        return redirect(url_for("research.landing"))
+    
+    try:
+        # Read Excel file
+        df = pd.read_excel(file, engine='openpyxl')
+        
+        # Column mapping (Thai headers to database fields)
+        column_map = {
+            'ชื่อโครงการ (TH)': 'project_th',
+            'ชื่อโครงการ (EN)': 'project_en',
+            'ผู้รับผิดชอบ': 'researcher_name',
+            'อีเมล': 'researcher_email',
+            'สังกัด': 'affiliation',
+            'งบประมาณ': 'funding',
+            'Deadline': 'deadline',
+            'วันเริ่มโครงการ': 'start_date',
+            'วันสิ้นสุดโครงการ': 'end_date'
+        }
+        
+        # Rename columns
+        df = df.rename(columns=column_map)
+        
+        conn = get_db()
+        inserted = 0
+        updated = 0
+        skipped = 0
+        errors = []
+        
+        for idx, row in df.iterrows():
+            try:
+                project_th = str(row.get('project_th', '')).strip() if pd.notna(row.get('project_th')) else ''
+                project_en = str(row.get('project_en', '')).strip() if pd.notna(row.get('project_en')) else ''
+                
+                # Skip if no project name
+                if not project_th and not project_en:
+                    skipped += 1
+                    continue
+                
+                researcher_name = str(row.get('researcher_name', '')).strip() if pd.notna(row.get('researcher_name')) else ''
+                researcher_email = str(row.get('researcher_email', '')).strip() if pd.notna(row.get('researcher_email')) else ''
+                affiliation = str(row.get('affiliation', '')).strip() if pd.notna(row.get('affiliation')) else ''
+                
+                # Handle funding
+                funding = 0
+                if pd.notna(row.get('funding')):
+                    try:
+                        funding = float(row.get('funding', 0))
+                    except:
+                        funding = 0
+                
+                # Handle dates
+                deadline = ''
+                if pd.notna(row.get('deadline')):
+                    dt = pd.to_datetime(row.get('deadline'), errors='coerce')
+                    if not pd.isna(dt):
+                        deadline = dt.strftime('%Y-%m-%d')
+                
+                start_date = ''
+                if pd.notna(row.get('start_date')):
+                    dt = pd.to_datetime(row.get('start_date'), errors='coerce')
+                    if not pd.isna(dt):
+                        start_date = dt.strftime('%Y-%m-%d')
+                
+                end_date = ''
+                if pd.notna(row.get('end_date')):
+                    dt = pd.to_datetime(row.get('end_date'), errors='coerce')
+                    if not pd.isna(dt):
+                        end_date = dt.strftime('%Y-%m-%d')
+                
+                # Check if project exists (by project_th)
+                existing = None
+                if project_th:
+                    existing = conn.execute(
+                        "SELECT id FROM research_projects WHERE project_th = ?",
+                        (project_th,)
+                    ).fetchone()
+                
+                if existing:
+                    # UPDATE existing project
+                    conn.execute("""
+                        UPDATE research_projects SET
+                            project_en = ?, researcher_name = ?, researcher_email = ?,
+                            affiliation = ?, funding = ?, deadline = ?,
+                            start_date = ?, end_date = ?
+                        WHERE id = ?
+                    """, (project_en, researcher_name, researcher_email, 
+                          affiliation, funding, deadline, start_date, end_date,
+                          existing['id']))
+                    updated += 1
+                else:
+                    # INSERT new project
+                    conn.execute("""
+                        INSERT INTO research_projects 
+                        (project_th, project_en, researcher_name, researcher_email, 
+                         affiliation, funding, deadline, start_date, end_date, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
+                    """, (project_th, project_en, researcher_name, researcher_email,
+                          affiliation, funding, deadline, start_date, end_date))
+                    inserted += 1
+                    
+            except Exception as e:
+                errors.append(f"บรรทัด {idx + 2}: {str(e)}")
+                skipped += 1
+        
+        conn.commit()
+        
+        # Log action
+        log_action("QUICK_IMPORT", details=f"Inserted: {inserted}, Updated: {updated}, Skipped: {skipped}")
+        
+        # Flash result
+        flash(f"นำเข้าเสร็จสิ้น: เพิ่มใหม่ {inserted} รายการ, อัพเดท {updated} รายการ, ข้าม {skipped} รายการ", "success")
+        
+        if errors:
+            flash(f"พบข้อผิดพลาด: {', '.join(errors[:3])}", "warning")
+        
+    except Exception as e:
+        flash(f"เกิดข้อผิดพลาด: {str(e)}", "danger")
+    
+    return redirect(url_for("research.landing"))
+
+
+# ---------------------------------------------------------
+# 📊 Export Data
+# ---------------------------------------------------------
+@research_bp.route("/export")
+@login_required
+def export_data():
+    """Export project data to Excel"""
+    from flask import Response
+    import io
+    
+    conn = get_db()
+    selected_year = request.args.get('year', 'all')
+    
+    try:
+        if selected_year != 'all' and selected_year:
+            projects = conn.execute("""
+                SELECT project_th, project_en, researcher_name, researcher_email,
+                       affiliation, funding, deadline, start_date, end_date, status
+                FROM research_projects
+                WHERE strftime('%Y', start_date) = ? OR strftime('%Y', deadline) = ?
+                ORDER BY deadline ASC
+            """, (selected_year, selected_year)).fetchall()
+        else:
+            projects = conn.execute("""
+                SELECT project_th, project_en, researcher_name, researcher_email,
+                       affiliation, funding, deadline, start_date, end_date, status
+                FROM research_projects
+                ORDER BY deadline ASC
+            """).fetchall()
+    except:
+        projects = []
+    
+    # Convert to DataFrame
+    data = []
+    for p in projects:
+        data.append({
+            'ชื่อโครงการ (TH)': p['project_th'] or '',
+            'ชื่อโครงการ (EN)': p['project_en'] or '',
+            'ผู้รับผิดชอบ': p['researcher_name'] or '',
+            'อีเมล': p['researcher_email'] or '',
+            'สังกัด': p['affiliation'] or '',
+            'งบประมาณ': p['funding'] or 0,
+            'Deadline': p['deadline'] or '',
+            'วันเริ่มโครงการ': p['start_date'] or '',
+            'วันสิ้นสุดโครงการ': p['end_date'] or '',
+            'สถานะ': p['status'] or 'draft'
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Write to Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Projects')
+    output.seek(0)
+    
+    # Filename with year
+    filename = f"ITRACK_Export_{selected_year}.xlsx" if selected_year != 'all' else "ITRACK_Export_All.xlsx"
+    
+    log_action("EXPORT_DATA", details=f"Exported {len(projects)} projects, year={selected_year}")
+    
+    return Response(
+        output.getvalue(),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment;filename={filename}'}
+    )
 

@@ -88,14 +88,13 @@
 
         .data-table {
             margin-bottom: 0;
-            color: var(--text-primary);
         }
 
         .data-table thead th {
             background: var(--table-header-bg);
-            color: var(--text-secondary);
+            color: var(--text-primary);
             font-weight: 600;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             padding: 1rem;
@@ -111,23 +110,45 @@
             border-bottom: 1px solid var(--border-light);
             vertical-align: middle;
             font-size: 0.9rem;
+            color: var(--text-primary);
         }
 
         .data-table tbody tr {
             transition: all 0.2s ease;
+            background: var(--bg-secondary);
         }
 
         .data-table tbody tr:hover {
             background: var(--table-hover-bg);
         }
 
+        /* Dark mode explicit overrides */
+        [data-theme="dark"] .data-table tbody tr {
+            background: #1e293b !important;
+        }
+
+        [data-theme="dark"] .data-table tbody td {
+            color: #ffffff !important;
+            background: transparent;
+        }
+
+        [data-theme="dark"] .project-title-th,
+        [data-theme="dark"] .project-title-en {
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .affiliation-badge {
+            background: rgba(59, 130, 246, 0.3) !important;
+            color: #ffffff !important;
+        }
+
         /* Project Title */
         .project-title {
-            max-width: 200px;
+            max-width: 300px;
         }
 
         .project-title-th {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-primary);
             display: block;
             line-height: 1.4;
@@ -176,11 +197,11 @@
 
         .affiliation-badge {
             background: var(--primary-50);
-            color: var(--primary-600);
+            color: var(--text-primary);
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 0.8rem;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         /* Action Buttons */
@@ -227,13 +248,13 @@
         }
 
         .funding-value {
-            font-weight: 600;
-            color: var(--primary-500);
+            font-weight: 700;
+            color: #059669;
         }
 
         /* Date */
         .date-value {
-            color: var(--text-muted);
+            color: #475569;
             font-size: 0.85rem;
         }
 
@@ -292,8 +313,8 @@
         }
 
         .btn-logout {
-            background: var(--danger-light);
-            color: var(--danger);
+            background: #dc2626;
+            color: #ffffff;
             border: none;
             width: 28px;
             height: 28px;
@@ -305,8 +326,13 @@
             transition: all 0.2s ease;
         }
 
+        .btn-logout i,
+        .btn-logout .bi {
+            color: #ffffff !important;
+        }
+
         .btn-logout:hover {
-            background: var(--danger);
+            background: #b91c1c;
             color: white;
         }
 
@@ -320,6 +346,12 @@
             justify-content: center;
             z-index: 9999;
             transition: opacity 0.3s ease;
+        }
+
+        .page-loader.hide {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
         }
 
         .loader-spinner {
@@ -533,7 +565,8 @@
                     <table class="table data-table">
                         <thead>
                             <tr>
-                                <th>ชื่อโครงการ</th>
+                                <th>ชื่อโครงการ (TH)</th>
+                                <th>ชื่อโครงการ (EN)</th>
                                 <th>ผู้รับผิดชอบ</th>
                                 <th>สังกัด</th>
                                 <th>เริ่ม</th>
@@ -548,11 +581,10 @@
                             {% for p in projects %}
                             <tr>
                                 <td>
-                                    <div class="project-title">
-                                        <span class="project-title-th">{{ p.project_th if p.project_th else '-'
-                                            }}</span>
-                                        <span class="project-title-en">{{ p.project_en if p.project_en else '' }}</span>
-                                    </div>
+                                    <span class="project-title-th">{{ p.project_th if p.project_th else '-' }}</span>
+                                </td>
+                                <td>
+                                    <span class="project-title-en">{{ p.project_en if p.project_en else '-' }}</span>
                                 </td>
                                 <td>
                                     <i class="bi bi-person-circle me-1 text-muted"></i>

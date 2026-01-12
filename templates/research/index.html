@@ -424,8 +424,8 @@
         }
 
         .btn-logout {
-            background: var(--danger-light);
-            color: var(--danger);
+            background: #dc2626;
+            color: #ffffff;
             border: none;
             width: 28px;
             height: 28px;
@@ -437,8 +437,13 @@
             transition: all 0.2s ease;
         }
 
+        .btn-logout i,
+        .btn-logout .bi {
+            color: #ffffff !important;
+        }
+
         .btn-logout:hover {
-            background: var(--danger);
+            background: #b91c1c;
             color: white;
         }
 
@@ -452,6 +457,12 @@
             justify-content: center;
             z-index: 9999;
             transition: opacity 0.3s ease;
+        }
+
+        .page-loader.hide {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
         }
 
         .loader-spinner {
@@ -573,6 +584,23 @@
             {% endif %}
             {% endwith %}
 
+            <!-- Year Filter & Export Bar -->
+            <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted"><i class="bi bi-calendar3 me-2"></i>ปี:</span>
+                    <select id="yearFilter" class="form-select form-select-dark" style="width: auto; min-width: 120px;"
+                        onchange="window.location.href='?year=' + this.value">
+                        <option value="all" {% if selected_year=='all' %}selected{% endif %}>ทุกปี</option>
+                        {% for year in years_list %}
+                        <option value="{{ year }}" {% if selected_year==year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <a href="{{ url_for('research.export_data', year=selected_year) }}" class="btn btn-outline-success">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+                </a>
+            </div>
+
             <!-- Summary Cards -->
             <div class="summary-grid animate-in">
                 <div class="stat-card primary">
@@ -601,6 +629,12 @@
                     <div class="stat-label">วันถึง Deadline</div>
                 </div>
             </div>
+
+            <!-- Chart Data (passed to JS via data attributes) -->
+            <div id="chartData" data-draft="{{ status_counts.draft }}"
+                data-in-progress="{{ status_counts.in_progress }}" data-under-review="{{ status_counts.under_review }}"
+                data-completed="{{ status_counts.completed }}" data-funding='{{ funding_by_affiliation | tojson }}'
+                style="display: none;"></div>
 
             <!-- Analytics Charts Section -->
             <div class="row g-4 mb-4 animate-in" style="animation-delay: 0.15s;">
@@ -633,107 +667,68 @@
                 </div>
             </div>
 
-            <!-- Project List Section -->
-            <div class="content-card mb-4 animate-in" style="animation-delay: 0.2s;">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>รายการโครงการวิจัยทั้งหมด</h6>
-                    <span class="badge bg-primary px-3 py-2">{{ total }} โครงการ</span>
-                </div>
-                <div class="card-body p-0">
-                    {% if project_list %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40%;">ชื่อโครงการ</th>
-                                    <th>ผู้รับผิดชอบ</th>
-                                    <th>สังกัด</th>
-                                    <th class="text-end">งบประมาณ</th>
-                                    <th class="text-center">Deadline</th>
-                                    <th class="text-center">สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for p in project_list %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('research.edit_project', pid=p.id) }}"
-                                            class="text-decoration-none project-link">
-                                            {{ p.project_th[:50] }}{% if p.project_th|length > 50 %}...{% endif %}
-                                        </a>
-                                    </td>
-                                    <td>{{ p.researcher_name }}</td>
-                                    <td><small class="text-muted">{{ p.affiliation }}</small></td>
-                                    <td class="text-end">
-                                        {% if p.funding > 0 %}
-                                        <span class="text-success">{{ "{:,.0f}".format(p.funding) }}</span>
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        {% if p.deadline %}
-                                        {% if p.deadline_status == 'overdue' %}
-                                        <span class="badge bg-danger">เลยกำหนด {{ -p.days_left }} วัน</span>
-                                        {% elif p.deadline_status == 'near_deadline' %}
-                                        <span class="badge bg-warning text-dark">เหลือ {{ p.days_left }} วัน</span>
-                                        {% elif p.deadline_status == 'on_track' %}
-                                        <span class="badge bg-success">{{ p.days_left }} วัน</span>
-                                        {% endif %}
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        {% if p.status == 'draft' %}
-                                        <span class="badge bg-secondary">Draft</span>
-                                        {% elif p.status == 'in_progress' %}
-                                        <span class="badge bg-primary">In Progress</span>
-                                        {% elif p.status == 'under_review' %}
-                                        <span class="badge bg-warning text-dark">Under Review</span>
-                                        {% elif p.status == 'completed' %}
-                                        <span class="badge bg-success">Completed</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">{{ p.status }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="empty-state py-5">
-                        <div class="empty-icon"><i class="bi bi-folder2-open"></i></div>
-                        <h5>ยังไม่มีโครงการ</h5>
-                        <p class="text-muted">อัปโหลดไฟล์ Excel เพื่อนำเข้าข้อมูลโครงการ</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
             <div class="row g-4">
                 <!-- Left Column - Upload & Sheet Selection -->
                 <div class="col-lg-4">
-                    <!-- Step 1: Upload -->
+                    <!-- Quick Import (Recommended) -->
                     <div class="content-card mb-4 animate-in" style="animation-delay: 0.1s;">
                         <div class="card-body">
-                            <h6 class="fw-bold mb-4 text-white">
-                                <span class="step-badge">1</span>นำเข้าไฟล์ข้อมูล
+                            <h6 class="fw-bold mb-3 text-white">
+                                <i class="bi bi-lightning-charge text-warning me-2"></i>นำเข้าด่วน
+                                <span class="badge bg-success ms-2">แนะนำ</span>
                             </h6>
-                            <form action="{{ url_for('research.upload') }}" method="POST" enctype="multipart/form-data">
+
+                            <!-- Download Template -->
+                            <a href="{{ url_for('research.download_template') }}"
+                                class="btn btn-outline-light-custom w-100 mb-3">
+                                <i class="bi bi-download me-2"></i>Download Template
+                            </a>
+
+                            <div class="text-center text-muted mb-3">
+                                <small>กรอกข้อมูลตาม Template แล้วอัปโหลด</small>
+                            </div>
+
+                            <!-- Quick Import Form -->
+                            <form action="{{ url_for('research.quick_import') }}" method="POST"
+                                enctype="multipart/form-data">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="upload-zone" onclick="document.getElementById('quickFileInput').click();"
+                                    id="quickUploadZone">
+                                    <i class="bi bi-file-earmark-excel upload-icon text-success"></i>
+                                    <div class="upload-text" id="quickUploadText">
+                                        เลือกไฟล์ Template<br>
+                                        <small class="text-muted">ระบบจะ import ทันที</small>
+                                    </div>
+                                    <input id="quickFileInput" type="file" name="file" accept=".xlsx,.xls"
+                                        class="d-none" required>
+                                </div>
+                                <button type="submit" class="btn btn-gradient w-100 mt-3">
+                                    <i class="bi bi-lightning-charge me-2"></i>Import ทันที
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Manual Import -->
+                    <div class="content-card mb-4 animate-in" style="animation-delay: 0.15s;">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3 text-white">
+                                <i class="bi bi-gear me-2"></i>นำเข้าแบบ Manual (เลือก Sheet)
+                            </h6>
+                            <form action="{{ url_for('research.upload') }}" method="POST" enctype="multipart/form-data"
+                                id="manualUploadForm">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="upload-zone" onclick="document.getElementById('fileInput').click();"
                                     id="uploadZone">
                                     <i class="bi bi-cloud-arrow-up upload-icon"></i>
                                     <div class="upload-text" id="uploadText">
                                         เลือกไฟล์ Excel หรือ CSV<br>
-                                        <small class="text-muted">ลากไฟล์มาวางหรือคลิกเพื่อเลือก</small>
+                                        <small class="text-muted">จะเลือก Sheet และ Map ด้วยตัวเอง</small>
                                     </div>
                                     <input id="fileInput" type="file" name="file" accept=".xlsx,.xls,.csv"
                                         class="d-none" required>
                                 </div>
-                                <button type="submit" class="btn btn-gradient w-100 mt-3">
+                                <button type="submit" class="btn btn-primary w-100 mt-3">
                                     <i class="bi bi-upload me-2"></i>อัปโหลดไฟล์
                                 </button>
                             </form>
@@ -881,8 +876,23 @@
                     uploadZone.style.borderColor = '#3b82f6';
                 }
             };
+        }
 
-            // Drag and drop
+        // Quick file input change
+        const quickFileInput = document.getElementById('quickFileInput');
+        const quickUploadText = document.getElementById('quickUploadText');
+        const quickUploadZone = document.getElementById('quickUploadZone');
+
+        if (quickFileInput) {
+            quickFileInput.onchange = function () {
+                if (this.files.length > 0) {
+                    quickUploadText.innerHTML = `<span class="file-selected text-success"><i class="bi bi-check-circle-fill me-2"></i>${this.files[0].name}</span>`;
+                    quickUploadZone.style.borderColor = '#10b981';
+                }
+            };
+        }
+
+        if (uploadZone) {
             ['dragenter', 'dragover'].forEach(evt => {
                 uploadZone.addEventListener(evt, e => {
                     e.preventDefault();
@@ -936,117 +946,10 @@
             }
         });
 
-        // Chart.js Configuration
-        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-        const textColor = isDarkMode ? '#e2e8f0' : '#1e293b';
-        const gridColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-
-        Chart.defaults.color = textColor;
-        Chart.defaults.borderColor = gridColor;
-
-        // Status Distribution Doughnut Chart
-        const statusCtx = document.getElementById('statusChart');
-        if (statusCtx) {
-            new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Draft', 'In Progress', 'Under Review', 'Completed'],
-                    datasets: [{
-                        data: [
-                            {{ status_counts.draft }},
-                    {{ status_counts.in_progress }},
-                            {{ status_counts.under_review }},
-        { { status_counts.completed } }
-                        ],
-        backgroundColor: [
-            '#6b7280',  // Gray - Draft
-            '#3b82f6',  // Blue - In Progress
-            '#f59e0b',  // Amber - Under Review
-            '#10b981'   // Green - Completed
-        ],
-            borderWidth: 0,
-                hoverOffset: 10
-                    }]
-                },
-        options: {
-            responsive: true,
-                maintainAspectRatio: true,
-                    cutout: '60%',
-                        plugins: {
-                legend: {
-                    position: 'bottom',
-                        labels: {
-                        padding: 15,
-                            usePointStyle: true,
-                                pointStyle: 'circle'
-                    }
-                }
-            }
-        }
-            });
-        }
-
-        // Funding by Affiliation Bar Chart
-        const fundingCtx = document.getElementById('fundingChart');
-        if (fundingCtx) {
-            const fundingData = {{ funding_by_affiliation | tojson
-        }};
-        const labels = Object.keys(fundingData);
-        const values = Object.values(fundingData);
-
-        new Chart(fundingCtx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'งบประมาณ (บาท)',
-                    data: values,
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1,
-                    borderRadius: 6,
-                    barThickness: 40
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return new Intl.NumberFormat('th-TH').format(context.raw) + ' บาท';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            display: true,
-                            color: gridColor
-                        },
-                        ticks: {
-                            callback: function (value) {
-                                return new Intl.NumberFormat('th-TH', { notation: 'compact' }).format(value);
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-        }
+        // Charts temporarily disabled
+        console.log('Dashboard loaded successfully');
     </script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </body>
 

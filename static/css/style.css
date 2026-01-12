@@ -86,30 +86,279 @@
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
     --bg-tertiary: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
+    --text-primary: #ffffff;
+    --text-secondary: #ffffff;
     --text-muted: #94a3b8;
-    --border-light: #334155;
-    --border-default: #475569;
+    --border-light: #475569;
+    --border-default: #64748b;
     --card-bg: #1e293b;
-    --card-border: rgba(255, 255, 255, 0.1);
-    --input-bg: #0f172a;
+    --card-border: rgba(255, 255, 255, 0.15);
+    --input-bg: #1e293b;
     --input-border: #475569;
-    --navbar-bg: rgba(15, 23, 42, 0.95);
+    --navbar-bg: #0f172a;
     --loader-bg: #0f172a;
-    --table-header-bg: rgba(15, 23, 42, 0.9);
-    --table-hover-bg: rgba(59, 130, 246, 0.08);
+    --table-header-bg: #1e3a5f;
+    --table-hover-bg: rgba(59, 130, 246, 0.2);
 
-    /* Dark theme status colors */
-    --success-light: rgba(16, 185, 129, 0.15);
-    --warning-light: rgba(245, 158, 11, 0.15);
-    --danger-light: rgba(239, 68, 68, 0.15);
-    --info-light: rgba(6, 182, 212, 0.15);
+    /* Override light colors for dark mode */
+    --primary-50: #1e3a5f;
+    --primary-100: #1e3a5f;
+    --slate-50: #1e293b;
+    --slate-100: #334155;
+
+    /* Dark theme status colors - brighter backgrounds */
+    --success-light: rgba(16, 185, 129, 0.4);
+    --warning-light: rgba(245, 158, 11, 0.4);
+    --danger-light: rgba(239, 68, 68, 0.4);
+    --info-light: rgba(6, 182, 212, 0.4);
+
+    /* Status text colors - bright for visibility */
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #38bdf8;
 
     /* Dark shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+}
+
+
+/* ===========================================
+   DARK MODE - IMPORTANT TEXT = WHITE
+   =========================================== */
+
+/* All table text = WHITE in dark mode */
+[data-theme="dark"] .data-table tbody td,
+[data-theme="dark"] .table tbody td,
+[data-theme="dark"] tbody td {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .data-table thead th,
+[data-theme="dark"] .table thead th,
+[data-theme="dark"] thead th {
+    color: #ffffff !important;
+    background: #1e3a5f !important;
+}
+
+/* Project titles = WHITE */
+[data-theme="dark"] .project-title-th,
+[data-theme="dark"] .project-title-en {
+    color: #ffffff !important;
+}
+
+/* Funding values = WHITE (important data) */
+[data-theme="dark"] .funding-value {
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+/* Date values = WHITE */
+[data-theme="dark"] .date-value {
+    color: #ffffff !important;
+}
+
+/* Affiliation badge = WHITE text */
+[data-theme="dark"] .affiliation-badge {
+    background: rgba(59, 130, 246, 0.3) !important;
+    color: #ffffff !important;
+}
+
+/* Form labels = WHITE */
+[data-theme="dark"] .form-label,
+[data-theme="dark"] label {
+    color: #ffffff !important;
+}
+
+/* Card headers = WHITE */
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-header h6,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: #ffffff !important;
+}
+
+/* Stat card values = WHITE */
+[data-theme="dark"] .stat-value,
+[data-theme="dark"] .card-value {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #cbd5e1 !important;
+}
+
+/* Links in dark mode = bright blue */
+[data-theme="dark"] a {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] a:hover {
+    color: #93c5fd !important;
+}
+
+/* Exception: Export button link stays white */
+[data-theme="dark"] a.btn-outline-success,
+[data-theme="dark"] .btn-outline-success {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] a.btn-outline-success:hover,
+[data-theme="dark"] .btn-outline-success:hover {
+    color: #ffffff !important;
+}
+
+/* Status badges - bright colors */
+[data-theme="dark"] .status-on-track {
+    background: rgba(16, 185, 129, 0.4) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .status-near-deadline {
+    background: rgba(245, 158, 11, 0.4) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .status-overdue {
+    background: rgba(239, 68, 68, 0.4) !important;
+    color: #ffffff !important;
+}
+
+/* Navbar and user badge */
+[data-theme="dark"] .navbar-brand-itrack {
+    color: #2563eb !important;
+}
+
+[data-theme="dark"] .nav-link-custom {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .user-name {
+    color: #ffffff !important;
+}
+
+/* Mapping items */
+[data-theme="dark"] .field-name {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .field-hint {
+    color: #cbd5e1 !important;
+}
+
+/* Preview table */
+[data-theme="dark"] .preview-table thead th {
+    color: #ffffff !important;
+    background: #1e3a5f !important;
+}
+
+[data-theme="dark"] .preview-table tbody td {
+    color: #ffffff !important;
+}
+
+/* Flash alerts in dark mode */
+[data-theme="dark"] .alert {
+    color: #ffffff !important;
+}
+
+/* Count info */
+[data-theme="dark"] .count-info {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .count-info strong {
+    color: #60a5fa !important;
+}
+
+/* Select/Input text */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    color: #ffffff !important;
+}
+
+/* ===========================================
+   LIGHT MODE - IMPORTANT TEXT = BLACK
+   =========================================== */
+
+/* Light mode table text = BLACK */
+:root .data-table tbody td,
+:root .table tbody td,
+:root tbody td {
+    color: #000000;
+}
+
+:root .data-table thead th,
+:root .table thead th,
+:root thead th {
+    color: #1e293b;
+    background: #f1f5f9;
+}
+
+/* Project titles = BLACK */
+.project-title-th {
+    color: #000000;
+    font-weight: 600;
+}
+
+.project-title-en {
+    color: #374151;
+}
+
+/* Funding = BLACK (bold) */
+.funding-value {
+    color: #000000;
+    font-weight: 700;
+}
+
+/* Date values = dark gray */
+.date-value {
+    color: #374151;
+}
+
+/* Affiliation badge */
+.affiliation-badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Export Excel Button - same color both modes */
+.btn-outline-success {
+    border: none !important;
+    color: #ffffff !important;
+    background: #059669 !important;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.btn-outline-success:hover {
+    background: #047857 !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-success i,
+.btn-outline-success .bi {
+    color: #ffffff !important;
+}
+
+/* Logout button - red/white both modes */
+.btn-logout {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.btn-logout i,
+.btn-logout .bi {
+    color: #ffffff !important;
 }
 
 /* ============================================
@@ -149,7 +398,7 @@ body {
 .navbar-brand-itrack {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary-600) !important;
+    color: #2563eb !important;
     letter-spacing: 1px;
 }
 
@@ -188,8 +437,8 @@ body {
 }
 
 .btn-logout {
-    background: var(--danger-light);
-    color: var(--danger);
+    background: #dc2626;
+    color: #ffffff;
     border: none;
     width: 28px;
     height: 28px;
@@ -202,8 +451,9 @@ body {
 }
 
 .btn-logout:hover {
-    background: var(--danger);
-    color: white;
+    background: #b91c1c;
+    color: #ffffff;
+    transform: scale(1.1);
 }
 
 /* Theme Toggle Button */
