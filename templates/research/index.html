@@ -538,9 +538,21 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('admin.users') }}">
+                            <i class="bi bi-people-fill me-1"></i>จัดการผู้ใช้
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link nav-link-custom" href="{{ url_for('auth.change_password') }}">
                             <i class="bi bi-key-fill me-1"></i>เปลี่ยนรหัสผ่าน
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('research.executive_report') }}">
+                            <i class="bi bi-graph-up-arrow me-1"></i>รายงาน
                         </a>
                     </li>
                     <li class="nav-item">
@@ -555,8 +567,19 @@
                     </li>
                     <li class="nav-item ms-2">
                         <div class="user-badge">
+                            {% if current_user.role == 'admin' %}
+                            <i class="bi bi-shield-fill-check text-danger"></i>
+                            {% elif current_user.role == 'manager' %}
+                            <i class="bi bi-briefcase-fill text-warning"></i>
+                            {% else %}
                             <i class="bi bi-person-circle text-muted"></i>
+                            {% endif %}
                             <span class="user-name">{{ current_user.username }}</span>
+                            {% if current_user.role == 'admin' %}
+                            <span class="badge bg-danger ms-1">Admin</span>
+                            {% elif current_user.role == 'manager' %}
+                            <span class="badge bg-warning text-dark ms-1">Manager</span>
+                            {% endif %}
                             <a href="{{ url_for('auth.logout') }}" class="btn-logout" title="ออกจากระบบ">
                                 <i class="bi bi-power"></i>
                             </a>
@@ -631,10 +654,9 @@
             </div>
 
             <!-- Chart Data (passed to JS via data attributes) -->
-            <div id="chartData" data-draft="{{ status_counts.draft }}"
-                data-in-progress="{{ status_counts.in_progress }}" data-under-review="{{ status_counts.under_review }}"
-                data-completed="{{ status_counts.completed }}" data-funding='{{ funding_by_affiliation | tojson }}'
-                style="display: none;"></div>
+            <div id="chartData" data-total="{{ total }}" data-on-track="{{ on_track }}"
+                data-near-deadline="{{ near_deadline }}" data-overdue="{{ overdue }}"
+                data-funding='{{ funding_by_affiliation | tojson }}' style="display: none;"></div>
 
             <!-- Analytics Charts Section -->
             <div class="row g-4 mb-4 animate-in" style="animation-delay: 0.15s;">
@@ -642,7 +664,7 @@
                 <div class="col-md-4">
                     <div class="content-card h-100">
                         <div class="card-header">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2"></i>สถานะโครงการ</h6>
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2"></i>สถานะ Deadline</h6>
                         </div>
                         <div class="card-body d-flex align-items-center justify-content-center">
                             <div style="max-width: 250px; width: 100%;">

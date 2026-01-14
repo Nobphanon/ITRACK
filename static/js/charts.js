@@ -10,10 +10,10 @@ function initCharts() {
     const chartDataEl = document.getElementById('chartData');
     if (!chartDataEl) return;
 
-    const statusDraft = parseInt(chartDataEl.dataset.draft) || 0;
-    const statusInProgress = parseInt(chartDataEl.dataset.inProgress) || 0;
-    const statusUnderReview = parseInt(chartDataEl.dataset.underReview) || 0;
-    const statusCompleted = parseInt(chartDataEl.dataset.completed) || 0;
+    const total = parseInt(chartDataEl.dataset.total) || 0;
+    const onTrack = parseInt(chartDataEl.dataset.onTrack) || 0;
+    const nearDeadline = parseInt(chartDataEl.dataset.nearDeadline) || 0;
+    const overdue = parseInt(chartDataEl.dataset.overdue) || 0;
 
     const fundingData = JSON.parse(chartDataEl.dataset.funding || '{}');
 
@@ -23,16 +23,16 @@ function initCharts() {
 
     Chart.defaults.color = textColor;
 
-    // Status Distribution Doughnut Chart
+    // Deadline Status Distribution Doughnut Chart
     const statusCtx = document.getElementById('statusChart');
     if (statusCtx) {
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Draft', 'In Progress', 'Under Review', 'Completed'],
+                labels: ['ทั้งหมด', 'ปกติ', 'ใกล้ครบกำหนด', 'เกินกำหนด'],
                 datasets: [{
-                    data: [statusDraft, statusInProgress, statusUnderReview, statusCompleted],
-                    backgroundColor: ['#6b7280', '#3b82f6', '#f59e0b', '#10b981'],
+                    data: [total, onTrack, nearDeadline, overdue],
+                    backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 10
                 }]
@@ -45,13 +45,39 @@ function initCharts() {
                     legend: {
                         position: 'bottom',
                         labels: { padding: 15, usePointStyle: true, pointStyle: 'circle' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} โครงการ (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const statusMap = ['', 'On Track', 'Near Deadline', 'Overdue'];
+                        const status = statusMap[index];
+
+                        // Navigate to dashboard with status filter
+                        if (index === 0) {
+                            // All projects - no filter
+                            window.location.href = '/dashboard';
+                        } else {
+                            window.location.href = `/dashboard?status=${encodeURIComponent(status)}`;
+                        }
                     }
                 }
             }
         });
     }
 
-    // Funding by Affiliation Bar Chart
+    // Funding by Affiliation Bar Chart (Vertical)
     const fundingCtx = document.getElementById('fundingChart');
     if (fundingCtx && Object.keys(fundingData).length > 0) {
         const labels = Object.keys(fundingData);
@@ -64,17 +90,18 @@ function initCharts() {
                 datasets: [{
                     label: 'งบประมาณ (บาท)',
                     data: values,
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1,
-                    borderRadius: 6,
-                    barThickness: 40
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',  // Sky blue
+                    borderColor: 'rgba(14, 165, 233, 1)',        // Darker sky blue
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    maxBarThickness: 50,
+                    hoverBackgroundColor: 'rgba(14, 165, 233, 0.9)',
+                    hoverBorderColor: 'rgba(2, 132, 199, 1)'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y',
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -86,7 +113,7 @@ function initCharts() {
                     }
                 },
                 scales: {
-                    x: {
+                    y: {
                         beginAtZero: true,
                         grid: { display: true, color: 'rgba(0,0,0,0.1)' },
                         ticks: {
@@ -95,7 +122,13 @@ function initCharts() {
                             }
                         }
                     },
-                    y: { grid: { display: false } }
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    }
                 }
             }
         });

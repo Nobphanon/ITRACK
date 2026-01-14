@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Summary | ITRACK</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+
+        body {
+            background: #1e293b;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .report-page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .report-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: #60a5fa;
+        }
+
+        .report-date {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        /* KPI Cards */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #475569;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+
+        .kpi-card.primary .kpi-value {
+            color: #3b82f6;
+        }
+
+        .kpi-card.success .kpi-value {
+            color: #10b981;
+        }
+
+        .kpi-card.warning .kpi-value {
+            color: #f59e0b;
+        }
+
+        .kpi-card.danger .kpi-value {
+            color: #ef4444;
+        }
+
+        .kpi-card.info .kpi-value {
+            color: #06b6d4;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chart-box {
+            background: #334155;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #475569;
+        }
+
+        .chart-box h3 {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Highlights */
+        .highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid;
+        }
+
+        .highlight-card.danger {
+            border-color: #ef4444;
+        }
+
+        .highlight-card.warning {
+            border-color: #f59e0b;
+        }
+
+        .highlight-card.success {
+            border-color: #10b981;
+        }
+
+        .highlight-card h4 {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+        }
+
+        .highlight-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .highlight-list li {
+            font-size: 0.8rem;
+            padding: 4px 0;
+            border-bottom: 1px solid #475569;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .highlight-list li:last-child {
+            border: none;
+        }
+
+        .progress-mini {
+            width: 40px;
+            height: 6px;
+            background: #475569;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-mini-bar {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        /* Print */
+        .no-print {}
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+                color: #1e293b !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .report-page {
+                padding: 0;
+            }
+
+            .kpi-card,
+            .chart-box,
+            .highlight-card {
+                background: #f1f5f9 !important;
+                border-color: #e2e8f0 !important;
+            }
+
+            .kpi-value,
+            .report-header h1 {
+                color: #1e40af !important;
+            }
+
+            .kpi-label,
+            .chart-box h3,
+            .highlight-card h4,
+            .report-date {
+                color: #64748b !important;
+            }
+
+            .highlight-list li {
+                color: #334155 !important;
+            }
+        }
+
+        .btn-action {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            background: #2563eb;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+        }
+
+        .btn-outline:hover {
+            background: #334155;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="report-page">
+        <!-- Header -->
+        <div class="report-header">
+            <div>
+                <h1><i class="bi bi-graph-up-arrow me-2"></i>ITRACK Executive Summary</h1>
+                <span class="report-date">รายงานสถานะโครงการวิจัย | {{ report_date }}
+                    {% if selected_affiliation != 'all' %} | <strong style="color:#60a5fa;">{{ selected_affiliation
+                        }}</strong>{% endif %}
+                </span>
+            </div>
+            <div class="no-print d-flex align-items-center gap-2">
+                <select id="affiliationFilter" class="form-select form-select-sm"
+                    style="width:auto;background:#334155;border-color:#475569;color:white;font-size:0.85rem;"
+                    onchange="window.location.href='{{ url_for('research.executive_report') }}?affiliation=' + this.value">
+                    <option value="all" {% if selected_affiliation=='all' %}selected{% endif %}>ทุกสังกัด</option>
+                    {% for aff in affiliations_list %}
+                    <option value="{{ aff }}" {% if selected_affiliation==aff %}selected{% endif %}>{{ aff }}</option>
+                    {% endfor %}
+                </select>
+                <button onclick="window.print()" class="btn-action">
+                    <i class="bi bi-printer me-1"></i>พิมพ์ PDF
+                </button>
+                <a href="{{ url_for('research.landing') }}" class="btn-action btn-outline">
+                    <i class="bi bi-arrow-left me-1"></i>กลับ
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row">
+            <div class="kpi-card primary">
+                <div class="kpi-value">{{ total }}</div>
+                <div class="kpi-label">โครงการทั้งหมด</div>
+            </div>
+            <div class="kpi-card success">
+                <div class="kpi-value">{{ completed }}</div>
+                <div class="kpi-label">เสร็จสมบูรณ์</div>
+            </div>
+            <div class="kpi-card info">
+                <div class="kpi-value">{{ in_progress }}</div>
+                <div class="kpi-label">กำลังดำเนินการ</div>
+            </div>
+            <div class="kpi-card success">
+                <div class="kpi-value">{{ on_track }}</div>
+                <div class="kpi-label">ปกติ</div>
+            </div>
+            <div class="kpi-card warning">
+                <div class="kpi-value">{{ near_deadline }}</div>
+                <div class="kpi-label">ใกล้กำหนด</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-value">{{ overdue }}</div>
+                <div class="kpi-label">เลยกำหนด</div>
+            </div>
+        </div>
+
+        <!-- Main Charts -->
+        <div class="main-grid">
+            <div class="chart-box">
+                <h3><i class="bi bi-pie-chart me-1"></i>สถานะ Deadline</h3>
+                <canvas id="deadlineChart" height="140"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3><i class="bi bi-bar-chart me-1"></i>สถานะงาน</h3>
+                <canvas id="statusChart" height="140"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3><i class="bi bi-graph-up me-1"></i>ตัวชี้วัดหลัก</h3>
+                <div style="padding: 10px 0;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span style="color:#94a3b8;font-size:0.8rem;">ความคืบหน้าเฉลี่ย</span>
+                        <span style="color:#3b82f6;font-size:1.5rem;font-weight:700;">{{ "%.0f"|format(avg_progress)
+                            }}%</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span style="color:#94a3b8;font-size:0.8rem;">อัตราความสำเร็จ</span>
+                        <span style="color:#10b981;font-size:1.5rem;font-weight:700;">{{ "%.0f"|format((completed /
+                            total * 100) if total > 0 else 0) }}%</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="color:#94a3b8;font-size:0.8rem;">งบประมาณรวม</span>
+                        <span style="color:#f59e0b;font-size:1.2rem;font-weight:600;">{{ "{:,.0f}".format(total_funding)
+                            }}฿</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Highlights -->
+        <div class="highlights">
+            <div class="highlight-card danger">
+                <h4><i class="bi bi-exclamation-triangle me-1"></i>โครงการเลยกำหนด</h4>
+                <ul class="highlight-list">
+                    {% for p in project_list if p.deadline_status == 'overdue' %}
+                    {% if loop.index <= 4 %} <li>
+                        <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
+                            p.project_th[:30] }}{% if p.project_th|length > 30 %}...{% endif %}</span>
+                        <span class="text-danger">{{ p.days_left }} วัน</span>
+                        </li>
+                        {% endif %}
+                        {% else %}
+                        <li style="color:#64748b;text-align:center;">ไม่มีโครงการเลยกำหนด ✓</li>
+                        {% endfor %}
+                </ul>
+            </div>
+            <div class="highlight-card warning">
+                <h4><i class="bi bi-clock me-1"></i>ใกล้ถึงกำหนด (7 วัน)</h4>
+                <ul class="highlight-list">
+                    {% for p in project_list if p.deadline_status == 'near_deadline' %}
+                    {% if loop.index <= 4 %} <li>
+                        <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
+                            p.project_th[:30] }}{% if p.project_th|length > 30 %}...{% endif %}</span>
+                        <span class="text-warning">{{ p.days_left }} วัน</span>
+                        </li>
+                        {% endif %}
+                        {% else %}
+                        <li style="color:#64748b;text-align:center;">ไม่มีโครงการใกล้กำหนด ✓</li>
+                        {% endfor %}
+                </ul>
+            </div>
+            <div class="highlight-card success">
+                <h4><i class="bi bi-trophy me-1"></i>ความคืบหน้าสูงสุด</h4>
+                <ul class="highlight-list">
+                    {% for p in project_list|sort(attribute='progress_percent', reverse=true) %}
+                    {% if loop.index <= 4 and p.progress_percent> 0 %}
+                        <li>
+                            <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
+                                p.project_th[:30] }}{% if p.project_th|length > 30 %}...{% endif %}</span>
+                            <span class="text-success">{{ p.progress_percent }}%</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-3" style="color:#64748b;font-size:0.75rem;">
+            Generated by ITRACK Research Management System | {{ report_date }}
+        </div>
+    </div>
+
+    <script>
+        // Deadline Chart
+        new Chart(document.getElementById('deadlineChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['ปกติ', 'ใกล้กำหนด', 'เลยกำหนด'],
+                datasets: [{
+                    data: [{{ on_track }}, {{ near_deadline }}, {{ overdue }}],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+            borderWidth: 0
+                }]
+            },
+            options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+        }
+        });
+
+        // Status Chart
+        new Chart(document.getElementById('statusChart'), {
+            type: 'bar',
+            data: {
+                labels: ['ไม่เริ่ม', 'ดำเนินการ', 'เสร็จ', 'หยุด', 'ล่าช้า'],
+                datasets: [{
+                    data: [{{ progress_by_status.not_started }}, {{ progress_by_status.in_progress }}, {{ progress_by_status.completed }}, {{ progress_by_status.on_hold }}, {{ progress_by_status.delayed }}],
+            backgroundColor: ['#64748b', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+            borderRadius: 4
+                }]
+            },
+            options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { color: '#64748b' }, grid: { color: '#475569' } }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } },
+            plugins: { legend: { display: false } }
+        }
+        });
+    </script>
+</body>
+
+</html>

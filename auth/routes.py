@@ -41,7 +41,12 @@ def login():
             user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
             login_user(user)
             log_login_attempt(username, success=True)
-            return redirect(url_for('research.landing'))
+            
+            # Role-based redirect after login
+            if user.role == 'researcher':
+                return redirect(url_for('researcher.dashboard'))
+            else:
+                return redirect(url_for('research.landing'))
 
         log_login_attempt(username, success=False)
         flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
@@ -96,7 +101,12 @@ def change_password():
 
         log_action("PASSWORD_CHANGED")
         flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
-        return redirect(url_for('research.landing'))
+        
+        # Role-based redirect after password change
+        if current_user.role == 'researcher':
+            return redirect(url_for('researcher.dashboard'))
+        else:
+            return redirect(url_for('research.landing'))
 
     return render_template('auth/change_password.html')
     

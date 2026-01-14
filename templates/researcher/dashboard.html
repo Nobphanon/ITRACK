@@ -1,0 +1,161 @@
+{% extends "base_researcher.html" %}
+
+{% block title %}โครงการของฉัน | ITRACK{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="mb-1"><i class="bi bi-kanban me-2"></i>โครงการของฉัน</h2>
+        <p class="text-muted mb-0">My Research Projects</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="bi bi-folder2-open"></i></div>
+                <div class="stat-value">{{ total }}</div>
+                <div class="stat-label">Total Projects</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-value">{{ completed }}</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                <div class="stat-value">{{ in_progress }}</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card info">
+                <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="stat-value">{{ "%.1f"|format(avg_progress) }}%</div>
+                <div class="stat-label">Avg Progress</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    {% if projects %}
+    <div class="row g-4">
+        {% for project in projects %}
+        <div class="col-md-6 col-lg-4">
+            <div class="content-card h-100">
+                <div class="card-body">
+                    <!-- Project Title -->
+                    <h5 class="mb-2 project-title-th">
+                        <a href="{{ url_for('researcher.project_detail', project_id=project.id) }}"
+                            class="text-decoration-none">
+                            {{ project.project_th or 'Untitled Project' }}
+                        </a>
+                    </h5>
+
+                    {% if project.project_en %}
+                    <p class="text-muted small mb-3 project-title-en">{{ project.project_en }}</p>
+                    {% endif %}
+
+                    <!-- Progress Bar -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">ความคืบหน้า</small>
+                            <strong class="text-primary">{{ project.progress_percent }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            {% if project.progress_percent <= 25 %} <div class="progress-bar bg-danger"
+                                style="width: {{ project.progress_percent }}%">
+                        </div>
+                        {% elif project.progress_percent <= 50 %} <div class="progress-bar bg-warning"
+                            style="width: {{ project.progress_percent }}%">
+                    </div>
+                    {% elif project.progress_percent <= 75 %} <div class="progress-bar bg-info"
+                        style="width: {{ project.progress_percent }}%">
+                </div>
+                {% else %}
+                <div class="progress-bar bg-success" style="width: {{ project.progress_percent }}%"></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div class="mb-3">
+            {% if project.current_status == 'not_started' %}
+            <span class="badge bg-secondary">
+                <i class="bi bi-circle me-1"></i>ยังไม่เริ่ม
+            </span>
+            {% elif project.current_status == 'in_progress' %}
+            <span class="badge bg-primary">
+                <i class="bi bi-arrow-repeat me-1"></i>กำลังดำเนินการ
+            </span>
+            {% elif project.current_status == 'completed' %}
+            <span class="badge bg-success">
+                <i class="bi bi-check-circle-fill me-1"></i>เสร็จสมบูรณ์
+            </span>
+            {% elif project.current_status == 'on_hold' %}
+            <span class="badge bg-warning">
+                <i class="bi bi-pause-circle me-1"></i>หยุดชั่วคราว
+            </span>
+            {% elif project.current_status == 'delayed' %}
+            <span class="badge bg-danger">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>ล่าช้า
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Deadline -->
+        {% if project.deadline %}
+        <div class="d-flex align-items-center text-muted small mb-2">
+            <i class="bi bi-calendar-event me-2"></i>
+            <span>Deadline: {{ project.deadline }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Funding -->
+        {% if project.funding %}
+        <div class="d-flex align-items-center text-muted small mb-3">
+            <i class="bi bi-currency-dollar me-2"></i>
+            <span>{{ "{:,.0f}".format(project.funding) }} บาท</span>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="d-grid">
+            <a href="{{ url_for('researcher.project_detail', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square me-2"></i>อัปเดตความคืบหน้า
+            </a>
+        </div>
+    </div>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="content-card">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+        <h5>ยังไม่มีโครงการที่ได้รับมอบหมาย</h5>
+        <p class="text-muted">กรุณาติดต่อ Manager เพื่อขอให้มอบหมายโครงการให้คุณ</p>
+    </div>
+</div>
+{% endif %}
+</div>
+
+<style>
+    .project-link {
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .project-link:hover {
+        color: var(--primary-500);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends "base_admin.html" %}
+
+{% block title %}จัดการผู้ใช้ | ITRACK{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-people-fill me-2"></i>จัดการผู้ใช้</h2>
+            <p class="text-muted mb-0">User Management - Admin Only</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="bi bi-person-plus-fill me-2"></i>เพิ่มผู้ใช้ใหม่
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-value">{{ users|length }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="bi bi-shield-fill-check"></i></div>
+                <div class="stat-value">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</div>
+                <div class="stat-label">Admins</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="bi bi-briefcase-fill"></i></div>
+                <div class="stat-value">{{ users|selectattr('role', 'equalto', 'manager')|list|length }}</div>
+                <div class="stat-label">Managers</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="bi bi-person-badge"></i></div>
+                <div class="stat-value">{{ users|selectattr('role', 'equalto', 'researcher')|list|length }}</div>
+                <div class="stat-label">Researchers</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="content-card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-table me-2"></i>รายชื่อผู้ใช้ทั้งหมด</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover data-table mb-0">
+                <thead>
+                    <tr>
+                        <th width="5%">#</th>
+                        <th width="20%">Username</th>
+                        <th width="30%">Email</th>
+                        <th width="15%">Role</th>
+                        <th width="30%" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.id == current_user.id %}
+                            <span class="badge bg-info ms-2">You</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-shield-fill-check me-1"></i>Admin
+                            </span>
+                            {% elif user.role == 'manager' %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-briefcase-fill me-1"></i>Manager
+                            </span>
+                            {% elif user.role == 'researcher' %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-person-badge me-1"></i>Researcher
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <!-- Edit Button -->
+                                <button class="btn btn-outline-primary"
+                                    onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.email }}', '{{ user.role }}')">
+                                    <i class="bi bi-pencil"></i> แก้ไข
+                                </button>
+
+                                <!-- Reset Password Button -->
+                                <button class="btn btn-outline-warning"
+                                    onclick="resetPassword({{ user.id }}, '{{ user.username }}')">
+                                    <i class="bi bi-key"></i> รีเซ็ตรหัส
+                                </button>
+
+                                <!-- Delete Button -->
+                                {% if user.id != current_user.id %}
+                                <button class="btn btn-outline-danger"
+                                    onclick="deleteUser({{ user.id }}, '{{ user.username }}')">
+                                    <i class="bi bi-trash"></i> ลบ
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('admin.create_user') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>เพิ่มผู้ใช้ใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="username" required pattern="[a-zA-Z0-9_]{3,20}"
+                            placeholder="ชื่อผู้ใช้ (3-20 ตัวอักษร, a-z, 0-9, _)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" required placeholder="email@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" required minlength="3"
+                            placeholder="รหัสผ่าน (อย่างน้อย 3 ตัวอักษร)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role <span class="text-danger">*</span></label>
+                        <select class="form-select" name="role" required>
+                            <option value="researcher" selected>Researcher (นักวิจัย)</option>
+                            <option value="manager">Manager (ผู้จัดการ)</option>
+                            <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>สร้างผู้ใช้
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editUserForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>แก้ไขผู้ใช้: <span
+                            id="editUsername"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" id="editEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role <span class="text-danger">*</span></label>
+                        <select class="form-select" name="role" id="editRole" required>
+                            <option value="researcher">Researcher (นักวิจัย)</option>
+                            <option value="manager">Manager (ผู้จัดการ)</option>
+                            <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="resetPasswordForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-key me-2"></i>รีเซ็ตรหัสผ่าน: <span
+                            id="resetUsername"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">รหัสผ่านใหม่ <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="new_password" required minlength="3"
+                            placeholder="รหัสผ่านใหม่ (อย่างน้อย 3 ตัวอักษร)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-key-fill me-2"></i>รีเซ็ตรหัสผ่าน
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="deleteUserForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>ยืนยันการลบ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ <strong id="deleteUsername"></strong>?</p>
+                    <p class="text-danger mb-0 mt-2"><small>การดำเนินการนี้ไม่สามารถย้อนกลับได้</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>ลบผู้ใช้
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editUser(id, username, email, role) {
+        document.getElementById('editUsername').textContent = username;
+        document.getElementById('editEmail').value = email;
+        document.getElementById('editRole').value = role;
+        document.getElementById('editUserForm').action = `/admin/users/${id}/edit`;
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    }
+
+    function resetPassword(id, username) {
+        document.getElementById('resetUsername').textContent = username;
+        document.getElementById('resetPasswordForm').action = `/admin/users/${id}/reset-password`;
+        new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+    }
+
+    function deleteUser(id, username) {
+        document.getElementById('deleteUsername').textContent = username;
+        document.getElementById('deleteUserForm').action = `/admin/users/${id}/delete`;
+        new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+    }
+</script>
+{% endblock %}

@@ -12,6 +12,9 @@ from notifications.email_service import send_alert_email
 import re
 from audit.service import log_project_action, log_action
 
+# ✅ Import permissions
+from permissions import manager_required, can_manage_projects
+
 research_bp = Blueprint("research", __name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -24,6 +27,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @research_bp.route("/")
 @login_required
 def landing():
+    # Redirect Researcher to their own dashboard
+    if current_user.role == 'researcher':
+        return redirect(url_for('researcher.dashboard'))
+    
     conn = get_db()
     
     # Get year filter from request
@@ -146,6 +153,7 @@ def landing():
 
 @research_bp.route("/upload", methods=["POST"])
 @login_required
+@manager_required
 def upload():
     print("📁 Upload route called!")
     file = request.files.get("file")
@@ -216,6 +224,7 @@ def upload():
 
 @research_bp.route("/preview-sheet", methods=["POST"])
 @login_required
+@manager_required
 def preview_sheet():
     import sys
     import json
@@ -296,6 +305,7 @@ def parse_date(val):
 
 @research_bp.route("/map-columns", methods=["POST"])
 @login_required
+@manager_required
 def map_columns():
     fields = ["project_th", "project_en", "researcher_name", "researcher_email", "affiliation", "funding", "deadline", "start_date", "end_date"]
     mapping = {f: request.form.get(f) for f in fields}
@@ -373,6 +383,7 @@ def map_columns():
 
 @research_bp.route("/dashboard")
 @login_required
+@manager_required
 def dashboard():
     conn = get_db()
     
@@ -381,16 +392,19 @@ def dashboard():
     aff = request.args.get("aff", "").strip()
     status = request.args.get("status", "").strip()
 
-    # Base Query
-    sql = "SELECT * FROM research_projects WHERE 1=1"
+    # Base Query - join with users to get assigned researcher info
+    sql = """SELECT rp.*, u.username as assigned_researcher_name 
+             FROM research_projects rp 
+             LEFT JOIN users u ON rp.assigned_researcher_id = u.id 
+             WHERE 1=1"""
     params = []
 
     if q:
-        sql += " AND (project_th LIKE ? OR researcher_name LIKE ? OR affiliation LIKE ?)"
+        sql += " AND (rp.project_th LIKE ? OR rp.researcher_name LIKE ? OR rp.affiliation LIKE ?)"
         params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
     
     if aff:
-        sql += " AND affiliation = ?"
+        sql += " AND rp.affiliation = ?"
         params.append(aff)
 
     rows = conn.execute(sql, params).fetchall()
@@ -398,6 +412,11 @@ def dashboard():
     # Get distinct affiliations for filter
     aff_rows = conn.execute("SELECT DISTINCT affiliation FROM research_projects WHERE affiliation != '' ORDER BY affiliation").fetchall()
     aff_list = [r['affiliation'] for r in aff_rows]
+    
+    # Get all researchers for assignment dropdown
+    researchers = conn.execute(
+        "SELECT id, username, email FROM users WHERE role = 'researcher' ORDER BY username"
+    ).fetchall()
     
     today = datetime.today().date()
     projects = []
@@ -432,10 +451,12 @@ def dashboard():
                            q=q,
                            aff=aff,
                            status_filter=status,
-                           aff_list=aff_list)
+                           aff_list=aff_list,
+                           researchers=researchers)
 
 @research_bp.route("/delete/<int:pid>", methods=["POST"])
 @login_required
+@manager_required
 def delete_project(pid):
     conn = get_db()
     # Get project name before deleting for audit log
@@ -494,6 +515,7 @@ def send_project_alert(pid):
 
 @research_bp.route("/edit/<int:pid>", methods=["GET", "POST"])
 @login_required
+@manager_required
 def edit_project(pid):
     conn = get_db()
     
@@ -540,10 +562,79 @@ def edit_project(pid):
 
 
 # ---------------------------------------------------------
+# 👥 Assign Researcher (Manager/Admin Only)
+# ---------------------------------------------------------
+@research_bp.route("/assign/<int:pid>", methods=["POST"])
+@login_required
+@manager_required
+def assign_researcher(pid):
+    """Assign a researcher to a project"""
+    researcher_id = request.form.get('researcher_id')
+    
+    if not researcher_id:
+        flash('กรุณาเลือก Researcher', 'warning')
+        return redirect(url_for('research.dashboard'))
+    
+    conn = get_db()
+    
+    # Verify researcher exists and has researcher role
+    researcher = conn.execute(
+        "SELECT id, username FROM users WHERE id = ? AND role = 'researcher'",
+        (researcher_id,)
+    ).fetchone()
+    
+    if not researcher:
+        flash('ไม่พบ Researcher ที่เลือก', 'danger')
+        return redirect(url_for('research.dashboard'))
+    
+    # Get project info
+    project = conn.execute(
+        "SELECT project_th FROM research_projects WHERE id = ?",
+        (pid,)
+    ).fetchone()
+    
+    if not project:
+        flash('ไม่พบโครงการ', 'danger')
+        return redirect(url_for('research.dashboard'))
+    
+    try:
+        # Assign researcher to project
+        conn.execute(
+            "UPDATE research_projects SET assigned_researcher_id = ? WHERE id = ?",
+            (researcher_id, pid)
+        )
+        conn.commit()
+        
+        log_project_action(
+            "RESEARCHER_ASSIGNED",
+            project_id=pid,
+            details=f"Assigned {researcher['username']} to project: {project['project_th']}"
+        )
+        
+        # Send assignment notification email
+        email_sent = False
+        try:
+            from notifications.scheduler import send_assignment_notification
+            email_sent = send_assignment_notification(researcher_id, pid)
+        except Exception as notify_err:
+            print(f"⚠️ Notification error (non-critical): {notify_err}")
+        
+        if email_sent:
+            flash(f'✅ มอบหมายโครงการให้ {researcher["username"]} สำเร็จ และส่ง Email แจ้งเตือนแล้ว', 'success')
+        else:
+            flash(f'✅ มอบหมายโครงการให้ {researcher["username"]} สำเร็จ (ไม่มี Email หรือส่ง Email ไม่สำเร็จ)', 'warning')
+    except Exception as e:
+        flash(f'เกิดข้อผิดพลาด: {str(e)}', 'danger')
+    
+    return redirect(url_for('research.dashboard'))
+
+
+# ---------------------------------------------------------
 # 📥 Download Template
 # ---------------------------------------------------------
 @research_bp.route("/download-template")
 @login_required
+@manager_required
 def download_template():
     """Generate and download Excel template for quick import"""
     from flask import Response
@@ -582,6 +673,7 @@ def download_template():
 # ---------------------------------------------------------
 @research_bp.route("/quick-import", methods=["POST"])
 @login_required
+@manager_required
 def quick_import():
     """Quick import from template with upsert logic"""
     if 'file' not in request.files:
@@ -717,8 +809,9 @@ def quick_import():
 # ---------------------------------------------------------
 @research_bp.route("/export")
 @login_required
+@manager_required
 def export_data():
-    """Export project data to Excel"""
+    """Export project data to Excel with full details"""
     from flask import Response
     import io
     
@@ -726,50 +819,91 @@ def export_data():
     selected_year = request.args.get('year', 'all')
     
     try:
+        base_sql = """
+            SELECT rp.*, u.username as assigned_researcher_name
+            FROM research_projects rp
+            LEFT JOIN users u ON rp.assigned_researcher_id = u.id
+        """
+        
         if selected_year != 'all' and selected_year:
-            projects = conn.execute("""
-                SELECT project_th, project_en, researcher_name, researcher_email,
-                       affiliation, funding, deadline, start_date, end_date, status
-                FROM research_projects
-                WHERE strftime('%Y', start_date) = ? OR strftime('%Y', deadline) = ?
-                ORDER BY deadline ASC
+            projects = conn.execute(base_sql + """
+                WHERE strftime('%Y', rp.start_date) = ? OR strftime('%Y', rp.deadline) = ?
+                ORDER BY rp.deadline ASC
             """, (selected_year, selected_year)).fetchall()
         else:
-            projects = conn.execute("""
-                SELECT project_th, project_en, researcher_name, researcher_email,
-                       affiliation, funding, deadline, start_date, end_date, status
-                FROM research_projects
-                ORDER BY deadline ASC
-            """).fetchall()
+            projects = conn.execute(base_sql + " ORDER BY rp.deadline ASC").fetchall()
     except:
         projects = []
     
-    # Convert to DataFrame
+    # Calculate deadline status
+    today = datetime.today().date()
     data = []
+    
     for p in projects:
+        # Calculate deadline status
+        deadline_status = "ไม่มีกำหนด"
+        days_left = None
+        if p['deadline']:
+            dt = pd.to_datetime(p['deadline'], errors='coerce')
+            if not pd.isna(dt):
+                days_left = (dt.date() - today).days
+                if days_left < 0:
+                    deadline_status = "เลยกำหนด"
+                elif days_left <= 7:
+                    deadline_status = "ใกล้กำหนด"
+                else:
+                    deadline_status = "ปกติ"
+        
+        # Map current_status to Thai
+        status_map = {
+            'not_started': 'ยังไม่เริ่ม',
+            'in_progress': 'กำลังดำเนินการ',
+            'completed': 'เสร็จสมบูรณ์',
+            'on_hold': 'หยุดชั่วคราว',
+            'delayed': 'ล่าช้า'
+        }
+        current_status_th = status_map.get(p['current_status'], 'ยังไม่เริ่ม')
+        
         data.append({
             'ชื่อโครงการ (TH)': p['project_th'] or '',
             'ชื่อโครงการ (EN)': p['project_en'] or '',
-            'ผู้รับผิดชอบ': p['researcher_name'] or '',
+            'ผู้รับผิดชอบหลัก': p['researcher_name'] or '',
             'อีเมล': p['researcher_email'] or '',
             'สังกัด': p['affiliation'] or '',
+            'Researcher ที่มอบหมาย': p['assigned_researcher_name'] if 'assigned_researcher_name' in p.keys() else 'ยังไม่มอบหมาย',
+            'ความคืบหน้า (%)': p['progress_percent'] if 'progress_percent' in p.keys() else 0,
+            'สถานะงาน': current_status_th,
+            'เหตุผลล่าช้า': p['delay_reason'] if 'delay_reason' in p.keys() and p['delay_reason'] else '',
             'งบประมาณ': p['funding'] or 0,
-            'Deadline': p['deadline'] or '',
             'วันเริ่มโครงการ': p['start_date'] or '',
             'วันสิ้นสุดโครงการ': p['end_date'] or '',
-            'สถานะ': p['status'] or 'draft'
+            'Deadline': p['deadline'] or '',
+            'สถานะ Deadline': deadline_status,
+            'เหลือวัน': days_left if days_left is not None else ''
         })
     
     df = pd.DataFrame(data)
     
-    # Write to Excel
+    # Write to Excel with formatting
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Projects')
+        
+        # Auto-adjust column widths
+        try:
+            from openpyxl.utils import get_column_letter
+            worksheet = writer.sheets['Projects']
+            for idx, col in enumerate(df.columns):
+                max_length = max(df[col].astype(str).map(len).max(), len(str(col))) + 2
+                col_letter = get_column_letter(idx + 1)  # 1-indexed
+                worksheet.column_dimensions[col_letter].width = min(max_length, 50)
+        except Exception as e:
+            print(f"Warning: Could not auto-adjust columns: {e}")
+    
     output.seek(0)
     
-    # Filename with year
-    filename = f"ITRACK_Export_{selected_year}.xlsx" if selected_year != 'all' else "ITRACK_Export_All.xlsx"
+    # Filename with date
+    filename = f"ITRACK_Report_{datetime.today().strftime('%Y%m%d')}.xlsx"
     
     log_action("EXPORT_DATA", details=f"Exported {len(projects)} projects, year={selected_year}")
     
@@ -778,4 +912,121 @@ def export_data():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition': f'attachment;filename={filename}'}
     )
+
+
+# ---------------------------------------------------------
+# 📋 Executive Report (Print-Friendly)
+# ---------------------------------------------------------
+@research_bp.route("/report")
+@login_required
+@manager_required
+def executive_report():
+    """Generate executive summary report (print-friendly for PDF)"""
+    conn = get_db()
+    today = datetime.today().date()
+    
+    # Get filter parameters
+    selected_affiliation = request.args.get('affiliation', 'all')
+    
+    # Get list of all affiliations
+    aff_rows = conn.execute("""
+        SELECT DISTINCT affiliation FROM research_projects 
+        WHERE affiliation IS NOT NULL AND affiliation != '' 
+        ORDER BY affiliation
+    """).fetchall()
+    affiliations_list = [r['affiliation'] for r in aff_rows]
+    
+    # Fetch projects with optional affiliation filter
+    base_sql = """
+        SELECT rp.*, u.username as assigned_researcher_name
+        FROM research_projects rp
+        LEFT JOIN users u ON rp.assigned_researcher_id = u.id
+    """
+    
+    if selected_affiliation != 'all' and selected_affiliation:
+        projects = conn.execute(base_sql + " WHERE rp.affiliation = ? ORDER BY rp.deadline ASC", 
+                               (selected_affiliation,)).fetchall()
+    else:
+        projects = conn.execute(base_sql + " ORDER BY rp.deadline ASC").fetchall()
+    
+    # Statistics
+    total = len(projects)
+    on_track = near_deadline = overdue = completed = in_progress = 0
+    total_funding = 0
+    funding_by_affiliation = {}
+    progress_by_status = {'not_started': 0, 'in_progress': 0, 'completed': 0, 'on_hold': 0, 'delayed': 0}
+    project_list = []
+    
+    for p in projects:
+        # Funding
+        funding = p['funding'] or 0
+        total_funding += funding
+        
+        aff = p['affiliation'] or 'ไม่ระบุ'
+        funding_by_affiliation[aff] = funding_by_affiliation.get(aff, 0) + funding
+        
+        # Status counters
+        status = p['current_status'] or 'not_started'
+        if status in progress_by_status:
+            progress_by_status[status] += 1
+        
+        if status == 'completed':
+            completed += 1
+        elif status == 'in_progress':
+            in_progress += 1
+        
+        # Deadline status
+        deadline_status = 'no_deadline'
+        days_left = None
+        if p['deadline']:
+            dt = pd.to_datetime(p['deadline'], errors='coerce')
+            if not pd.isna(dt):
+                days_left = (dt.date() - today).days
+                if days_left < 0:
+                    overdue += 1
+                    deadline_status = 'overdue'
+                elif days_left <= 7:
+                    near_deadline += 1
+                    deadline_status = 'near_deadline'
+                else:
+                    on_track += 1
+                    deadline_status = 'on_track'
+        
+        project_list.append({
+            'id': p['id'],
+            'project_th': p['project_th'] or '-',
+            'researcher_name': p['researcher_name'] or '-',
+            'assigned_researcher': p['assigned_researcher_name'] or 'ยังไม่มอบหมาย',
+            'affiliation': aff,
+            'progress_percent': p['progress_percent'] or 0,
+            'current_status': status,
+            'deadline': p['deadline'] or '-',
+            'days_left': days_left,
+            'deadline_status': deadline_status,
+            'funding': funding
+        })
+    
+    # Sort funding by affiliation
+    top_affiliations = sorted(funding_by_affiliation.items(), key=lambda x: x[1], reverse=True)[:5]
+    
+    # Calculate average progress
+    avg_progress = sum(p['progress_percent'] for p in project_list) / total if total > 0 else 0
+    
+    log_action("VIEW_REPORT", details=f"Viewed executive report, affiliation={selected_affiliation}")
+    
+    return render_template("research/report.html",
+                           total=total,
+                           on_track=on_track,
+                           near_deadline=near_deadline,
+                           overdue=overdue,
+                           completed=completed,
+                           in_progress=in_progress,
+                           avg_progress=avg_progress,
+                           total_funding=total_funding,
+                           top_affiliations=top_affiliations,
+                           progress_by_status=progress_by_status,
+                           project_list=project_list,
+                           report_date=today.strftime('%d/%m/%Y'),
+                           affiliations_list=affiliations_list,
+                           selected_affiliation=selected_affiliation)
 

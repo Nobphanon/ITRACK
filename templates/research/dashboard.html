@@ -247,6 +247,16 @@
             color: white;
         }
 
+        .btn-assign {
+            background: var(--info-light);
+            color: var(--info);
+        }
+
+        .btn-assign:hover {
+            background: var(--info);
+            color: white;
+        }
+
         .funding-value {
             font-weight: 700;
             color: #059669;
@@ -256,6 +266,28 @@
         .date-value {
             color: #475569;
             font-size: 0.85rem;
+        }
+
+        /* Researcher Badge */
+        .researcher-badge {
+            background: var(--success-light);
+            color: var(--success);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .unassigned-badge {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-style: italic;
         }
 
         /* Count Info */
@@ -464,14 +496,37 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('research.executive_report') }}">
+                            <i class="bi bi-graph-up-arrow me-1"></i>รายงาน
+                        </a>
+                    </li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('admin.users') }}">
+                            <i class="bi bi-people-fill me-1"></i>จัดการผู้ใช้
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
                         <button id="theme-toggle" class="btn-theme-toggle" title="เปลี่ยนโหมดสี">
                             <i class="bi bi-moon-fill"></i>
                         </button>
                     </li>
                     <li class="nav-item ms-2">
                         <div class="user-badge">
+                            {% if current_user.role == 'admin' %}
+                            <i class="bi bi-shield-fill-check text-danger"></i>
+                            {% elif current_user.role == 'manager' %}
+                            <i class="bi bi-briefcase-fill text-warning"></i>
+                            {% else %}
                             <i class="bi bi-person-circle text-muted"></i>
+                            {% endif %}
                             <span class="user-name">{{ current_user.username }}</span>
+                            {% if current_user.role == 'admin' %}
+                            <span class="badge bg-danger ms-1">Admin</span>
+                            {% elif current_user.role == 'manager' %}
+                            <span class="badge bg-warning text-dark ms-1">Manager</span>
+                            {% endif %}
                             <a href="{{ url_for('auth.logout') }}" class="btn-logout" title="ออกจากระบบ">
                                 <i class="bi bi-power"></i>
                             </a>
@@ -569,6 +624,8 @@
                                 <th>ชื่อโครงการ (EN)</th>
                                 <th>ผู้รับผิดชอบ</th>
                                 <th>สังกัด</th>
+                                <th>Researcher</th>
+                                <th class="text-center">ความคืบหน้า</th>
                                 <th>เริ่ม</th>
                                 <th>สิ้นสุด</th>
                                 <th>งบประมาณ</th>
@@ -597,57 +654,116 @@
                                     <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td class="date-value">{{ p.start_date if p.start_date else '-' }}</td>
-                                <td class="date-value">{{ p.end_date if p.end_date else '-' }}</td>
                                 <td>
-                                    {% if p.funding and p.funding > 0 %}
-                                    <span class="funding-value">{{ "{:,.0f}".format(p.funding) }}</span>
+                                    {% if p.assigned_researcher_name %}
+                                    <span class="researcher-badge">
+                                        <i class="bi bi-person-check-fill"></i>
+                                        {{ p.assigned_researcher_name }}
+                                    </span>
                                     {% else %}
-                                    <span class="text-muted">-</span>
+                                    <span class="unassigned-badge">ยังไม่มอบหมาย</span>
                                     {% endif %}
                                 </td>
-                                <td class="date-value">{{ p.deadline if p.deadline else '-' }}</td>
-                                <td class="text-center">
-                                    {% if p.status_text == 'On Track' %}
-                                    <span class="status-badge status-on-track">On Track</span>
-                                    {% elif p.status_text == 'Near Deadline' %}
-                                    <span class="status-badge status-near-deadline">Near Deadline</span>
-                                    {% elif p.status_text == 'Overdue' %}
-                                    <span class="status-badge status-overdue">Overdue</span>
-                                    {% else %}
-                                    <span class="status-badge status-unknown">Unknown</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ url_for('research.edit_project', pid=p.id) }}"
-                                            class="btn btn-action btn-edit" title="แก้ไข">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </a>
-                                        <form method="POST"
-                                            action="{{ url_for('research.send_project_alert', pid=p.id) }}"
-                                            class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn btn-action btn-email" title="ส่งเมล">
-                                                <i class="bi bi-envelope-fill"></i>
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="{{ url_for('research.delete_project', pid=p.id) }}"
-                                            class="d-inline" onsubmit="return confirm('ลบโครงการนี้?')">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn btn-action btn-delete" title="ลบ">
-                                                <i class="bi bi-trash-fill"></i>
-                                            </button>
-                                        </form>
+                                <td class="text-center" style="min-width: 120px;">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <strong class="mb-1" style="color: var(--primary-500);">{{ p.progress_percent or
+                                            0 }}%</strong>
+                                        <div class="progress w-100" style="height: 6px;">
+                                            {% set progress = p.progress_percent or 0 %}
+                                            {% if progress <= 25 %} <div class="progress-bar bg-danger"
+                                                style="width: {{ progress }}%">
+                                        </div>
+                                        {% elif progress <= 50 %} <div class="progress-bar bg-warning"
+                                            style="width: {{ progress }}%">
                                     </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    {% elif progress <= 75 %} <div class="progress-bar bg-info"
+                                        style="width: {{ progress }}%">
                 </div>
+                {% else %}
+                <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                {% endif %}
             </div>
         </div>
+        </td>
+        <td class="date-value">{{ p.start_date if p.start_date else '-' }}</td>
+        <td class="date-value">{{ p.end_date if p.end_date else '-' }}</td>
+        <td>
+            {% if p.funding and p.funding > 0 %}
+            <span class="funding-value">{{ "{:,.0f}".format(p.funding) }}</span>
+            {% else %}
+            <span class="text-muted">-</span>
+            {% endif %}
+        </td>
+        <td class="date-value">{{ p.deadline if p.deadline else '-' }}</td>
+        <td class="text-center">
+            {% if p.status_text == 'On Track' %}
+            <span class="status-badge status-on-track">On Track</span>
+            {% elif p.status_text == 'Near Deadline' %}
+            <span class="status-badge status-near-deadline">Near Deadline</span>
+            {% elif p.status_text == 'Overdue' %}
+            <span class="status-badge status-overdue">Overdue</span>
+            {% else %}
+            <span class="status-badge status-unknown">Unknown</span>
+            {% endif %}
+        </td>
+        <td>
+            <div class="d-flex justify-content-end gap-1">
+                <!-- Assign Researcher -->
+                <div class="dropdown d-inline">
+                    <button class="btn btn-action btn-assign" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" title="มอบหมาย Researcher">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 200px;">
+                        <li>
+                            <h6 class="dropdown-header">เลือก Researcher</h6>
+                        </li>
+                        {% for r in researchers %}
+                        <li>
+                            <form method="POST" action="{{ url_for('research.assign_researcher', pid=p.id) }}"
+                                class="dropdown-item-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="researcher_id" value="{{ r.id }}">
+                                <button type="submit"
+                                    class="dropdown-item {% if p.assigned_researcher_id == r.id %}active{% endif %}">
+                                    {% if p.assigned_researcher_id == r.id %}
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    {% else %}
+                                    <i class="bi bi-person me-1"></i>
+                                    {% endif %}
+                                    {{ r.username }}
+                                </button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <a href="{{ url_for('research.edit_project', pid=p.id) }}" class="btn btn-action btn-edit"
+                    title="แก้ไข">
+                    <i class="bi bi-pencil-fill"></i>
+                </a>
+                <form method="POST" action="{{ url_for('research.send_project_alert', pid=p.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-action btn-email" title="ส่งเมล">
+                        <i class="bi bi-envelope-fill"></i>
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('research.delete_project', pid=p.id) }}" class="d-inline"
+                    onsubmit="return confirm('ลบโครงการนี้?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-action btn-delete" title="ลบ">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </form>
+            </div>
+        </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

@@ -74,6 +74,23 @@ def init_db():
         conn.execute("ALTER TABLE research_projects ADD COLUMN end_date TEXT")
     if 'status' not in columns:
         conn.execute("ALTER TABLE research_projects ADD COLUMN status TEXT DEFAULT 'draft'")
+    
+    # ---------- NEW: Progress Tracking Columns ----------
+    if 'progress_percent' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN progress_percent INTEGER DEFAULT 0")
+        logger.info("✅ Added progress_percent column")
+    if 'current_status' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN current_status TEXT DEFAULT 'not_started'")
+        logger.info("✅ Added current_status column")
+    if 'last_updated_at' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN last_updated_at TEXT")
+        logger.info("✅ Added last_updated_at column")
+    if 'last_updated_by' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN last_updated_by INTEGER")
+        logger.info("✅ Added last_updated_by column")
+    if 'assigned_researcher_id' not in columns:
+        conn.execute("ALTER TABLE research_projects ADD COLUMN assigned_researcher_id INTEGER")
+        logger.info("✅ Added assigned_researcher_id column")
 
     # ---------- Users ----------
     conn.execute("""
@@ -101,12 +118,27 @@ def init_db():
         )
     """)
 
+    # ---------- NEW: Project Updates History ----------
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS project_updates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            updated_by INTEGER NOT NULL,
+            updated_at TEXT NOT NULL,
+            progress_percent INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            remarks TEXT,
+            delay_reason TEXT,
+            FOREIGN KEY (project_id) REFERENCES research_projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (updated_by) REFERENCES users(id)
+        )
+    """)
+    logger.info("✅ Project updates table ready")
+
     # ---------- Default Admin ----------
     cur = conn.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cur.fetchone():
-        # Read password from environment variable (fallback to #123 if not set)
         default_password = os.getenv('DEFAULT_ADMIN_PASSWORD', '#123')
-        
         hashed_pw = generate_password_hash(default_password)
         admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@itrack.local')
         
@@ -115,6 +147,32 @@ def init_db():
             VALUES (?, ?, ?, ?)
         """, ("admin", hashed_pw, admin_email, "admin"))
         logger.info(f"✅ Created default admin user with email: {admin_email}")
+
+    # ---------- NEW: Default Manager ----------
+    cur = conn.execute("SELECT * FROM users WHERE username = 'manager'")
+    if not cur.fetchone():
+        default_password = os.getenv('DEFAULT_MANAGER_PASSWORD', '#123')
+        hashed_pw = generate_password_hash(default_password)
+        manager_email = 'manager@itrack.local'
+        
+        conn.execute("""
+            INSERT INTO users (username, password, email, role)
+            VALUES (?, ?, ?, ?)
+        """, ("manager", hashed_pw, manager_email, "manager"))
+        logger.info(f"✅ Created default manager user with email: {manager_email}")
+
+    # ---------- NEW: Default Researcher ----------
+    cur = conn.execute("SELECT * FROM users WHERE username = 'researcher'")
+    if not cur.fetchone():
+        default_password = os.getenv('DEFAULT_RESEARCHER_PASSWORD', '#123')
+        hashed_pw = generate_password_hash(default_password)
+        researcher_email = 'researcher@itrack.local'
+        
+        conn.execute("""
+            INSERT INTO users (username, password, email, role)
+            VALUES (?, ?, ?, ?)
+        """, ("researcher", hashed_pw, researcher_email, "researcher"))
+        logger.info(f"✅ Created default researcher user with email: {researcher_email}")
 
     conn.commit()
 

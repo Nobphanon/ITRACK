@@ -63,6 +63,14 @@ def load_user(user_id):
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(research_bp)
 
+# Admin Blueprint (Admin only)
+from admin.routes import admin_bp
+app.register_blueprint(admin_bp)
+
+# Researcher Blueprint  
+from researcher.routes import researcher_bp
+app.register_blueprint(researcher_bp)
+
 # Database Initialization
 with app.app_context():
     init_db()
