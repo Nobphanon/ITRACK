@@ -53,8 +53,12 @@ login_manager.login_message_category = "warning"
 
 @login_manager.user_loader
 def load_user(user_id):
+    from database import IS_POSTGRES
     conn = get_db()
-    u = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    cursor = conn.cursor()
+    placeholder = '%s' if IS_POSTGRES else '?'
+    cursor.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+    u = cursor.fetchone()
     if u:
         return User(u['id'], u['username'], u['email'], u['role'])
     return None

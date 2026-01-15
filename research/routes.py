@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from models import get_db
+from database import IS_POSTGRES
 from services.excel_service import get_smart_df
 
 # ✅ Import ฟังก์ชันส่งเมล
@@ -36,18 +37,32 @@ def landing():
     # Get year filter from request
     selected_year = request.args.get('year', 'all')
     
-    # Get list of available years
+    # Get list of available years - use different SQL for PostgreSQL
     try:
-        years_result = conn.execute("""
-            SELECT DISTINCT strftime('%Y', start_date) as year 
-            FROM research_projects 
-            WHERE start_date IS NOT NULL AND start_date != ''
-            UNION
-            SELECT DISTINCT strftime('%Y', deadline) as year 
-            FROM research_projects 
-            WHERE deadline IS NOT NULL AND deadline != ''
-            ORDER BY year DESC
-        """).fetchall()
+        if IS_POSTGRES:
+            # PostgreSQL uses EXTRACT function
+            years_result = conn.execute("""
+                SELECT DISTINCT EXTRACT(YEAR FROM start_date::DATE)::TEXT as year 
+                FROM research_projects 
+                WHERE start_date IS NOT NULL AND start_date != ''
+                UNION
+                SELECT DISTINCT EXTRACT(YEAR FROM deadline::DATE)::TEXT as year 
+                FROM research_projects 
+                WHERE deadline IS NOT NULL AND deadline != ''
+                ORDER BY year DESC
+            """).fetchall()
+        else:
+            # SQLite uses strftime
+            years_result = conn.execute("""
+                SELECT DISTINCT strftime('%Y', start_date) as year 
+                FROM research_projects 
+                WHERE start_date IS NOT NULL AND start_date != ''
+                UNION
+                SELECT DISTINCT strftime('%Y', deadline) as year 
+                FROM research_projects 
+                WHERE deadline IS NOT NULL AND deadline != ''
+                ORDER BY year DESC
+            """).fetchall()
         years_list = [r['year'] for r in years_result if r['year']]
     except:
         years_list = []
@@ -55,13 +70,23 @@ def landing():
     # Fetch projects with optional year filter
     try:
         if selected_year != 'all' and selected_year:
-            projects = conn.execute("""
-                SELECT id, project_th, researcher_name, researcher_email, 
-                       affiliation, funding, deadline, start_date, end_date, status
-                FROM research_projects
-                WHERE strftime('%Y', start_date) = ? OR strftime('%Y', deadline) = ?
-                ORDER BY deadline ASC
-            """, (selected_year, selected_year)).fetchall()
+            if IS_POSTGRES:
+                projects = conn.execute("""
+                    SELECT id, project_th, researcher_name, researcher_email, 
+                           affiliation, funding, deadline, start_date, end_date, status
+                    FROM research_projects
+                    WHERE EXTRACT(YEAR FROM start_date::DATE)::TEXT = ? 
+                       OR EXTRACT(YEAR FROM deadline::DATE)::TEXT = ?
+                    ORDER BY deadline ASC
+                """, (selected_year, selected_year)).fetchall()
+            else:
+                projects = conn.execute("""
+                    SELECT id, project_th, researcher_name, researcher_email, 
+                           affiliation, funding, deadline, start_date, end_date, status
+                    FROM research_projects
+                    WHERE strftime('%Y', start_date) = ? OR strftime('%Y', deadline) = ?
+                    ORDER BY deadline ASC
+                """, (selected_year, selected_year)).fetchall()
         else:
             projects = conn.execute("""
                 SELECT id, project_th, researcher_name, researcher_email, 

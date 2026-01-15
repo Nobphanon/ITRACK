@@ -1,12 +1,16 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import get_db, User
+from models import get_db, User, execute_query
+from database import IS_POSTGRES
 from extensions import limiter
 from audit.service import log_login_attempt, log_action
 
 auth_bp = Blueprint('auth', __name__)
 
+# Get correct placeholder for current database
+def ph():
+    return '%s' if IS_POSTGRES else '?'
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -24,21 +28,27 @@ def login():
             return render_template("auth/login.html")
 
         conn = get_db()
-        user_row = conn.execute(
-            "SELECT * FROM users WHERE username = ?",
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT * FROM users WHERE username = {ph()}",
             (username,)
-        ).fetchone()
-        # conn.close() removed (handled by teardown)
+        )
+        user_row = cursor.fetchone()
 
         if not user_row:
             log_login_attempt(username, success=False)
             flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
             return render_template("auth/login.html")
 
-        hashed = str(user_row['password'])
+        # Handle both dict-like and tuple-like row access
+        if IS_POSTGRES:
+            hashed = str(user_row['password'])
+            user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
+        else:
+            hashed = str(user_row['password'])
+            user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
 
         if check_password_hash(hashed, pw):
-            user = User(user_row['id'], user_row['username'], user_row['email'], user_row['role'])
             login_user(user)
             log_login_attempt(username, success=True)
             
@@ -79,25 +89,24 @@ def change_password():
         confirm = request.form.get('confirm_password')
 
         conn = get_db()
-        user_row = conn.execute(
-            "SELECT password FROM users WHERE id = ?",
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT password FROM users WHERE id = {ph()}",
             (current_user.id,)
-        ).fetchone()
+        )
+        user_row = cursor.fetchone()
 
         if not user_row or not check_password_hash(str(user_row['password']), old):
-            # conn.close()
             flash('รหัสผ่านเดิมไม่ถูกต้อง', 'danger')
             return redirect(url_for('auth.change_password'))
 
         if new != confirm:
-            # conn.close()
             flash('รหัสผ่านใหม่ไม่ตรงกัน', 'danger')
             return redirect(url_for('auth.change_password'))
 
         hashed = generate_password_hash(new)
-        conn.execute("UPDATE users SET password = ? WHERE id = ?", (hashed, current_user.id))
+        cursor.execute(f"UPDATE users SET password = {ph()} WHERE id = {ph()}", (hashed, current_user.id))
         conn.commit()
-        # conn.close()
 
         log_action("PASSWORD_CHANGED")
         flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
@@ -109,4 +118,3 @@ def change_password():
             return redirect(url_for('research.landing'))
 
     return render_template('auth/change_password.html')
-    

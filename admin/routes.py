@@ -7,11 +7,16 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from models import get_db
+from database import IS_POSTGRES
 from permissions import admin_required
 from audit.service import log_action
 import re
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+# Get correct placeholder for current database
+def ph():
+    return '%s' if IS_POSTGRES else '?'
 
 
 @admin_bp.route('/users')
@@ -20,7 +25,8 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 def users():
     """List all users"""
     conn = get_db()
-    users = conn.execute("""
+    cursor = conn.cursor()
+    cursor.execute("""
         SELECT id, username, email, role
         FROM users
         ORDER BY 
@@ -31,7 +37,8 @@ def users():
                 ELSE 4
             END,
             username
-    """).fetchall()
+    """)
+    users = cursor.fetchall()
     
     return render_template('admin/users.html', users=users)
 
@@ -68,20 +75,23 @@ def create_user():
     
     # Check if username already exists
     conn = get_db()
-    existing = conn.execute(
-        "SELECT id FROM users WHERE username = ?", 
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT id FROM users WHERE username = {ph()}", 
         (username,)
-    ).fetchone()
+    )
+    existing = cursor.fetchone()
     
     if existing:
         flash(f'Username "{username}" มีอยู่ในระบบแล้ว', 'danger')
         return redirect(url_for('admin.users'))
     
     # Check if email already exists
-    existing_email = conn.execute(
-        "SELECT id FROM users WHERE email = ?", 
+    cursor.execute(
+        f"SELECT id FROM users WHERE email = {ph()}", 
         (email,)
-    ).fetchone()
+    )
+    existing_email = cursor.fetchone()
     
     if existing_email:
         flash(f'Email "{email}" มีอยู่ในระบบแล้ว', 'danger')
@@ -90,9 +100,9 @@ def create_user():
     # Create user
     hashed_password = generate_password_hash(password)
     try:
-        conn.execute("""
+        cursor.execute(f"""
             INSERT INTO users (username, email, password, role)
-            VALUES (?, ?, ?, ?)
+            VALUES ({ph()}, {ph()}, {ph()}, {ph()})
         """, (username, email, hashed_password, role))
         conn.commit()
         
@@ -133,18 +143,21 @@ def edit_user(user_id):
         return redirect(url_for('admin.users'))
     
     conn = get_db()
+    cursor = conn.cursor()
     
     # Get user info
-    user = conn.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    cursor.execute(f"SELECT username FROM users WHERE id = {ph()}", (user_id,))
+    user = cursor.fetchone()
     if not user:
         flash('ไม่พบผู้ใช้', 'danger')
         return redirect(url_for('admin.users'))
     
     # Check if email already exists (exclude current user)
-    existing_email = conn.execute(
-        "SELECT id FROM users WHERE email = ? AND id != ?", 
+    cursor.execute(
+        f"SELECT id FROM users WHERE email = {ph()} AND id != {ph()}", 
         (email, user_id)
-    ).fetchone()
+    )
+    existing_email = cursor.fetchone()
     
     if existing_email:
         flash(f'Email "{email}" มีอยู่ในระบบแล้ว', 'danger')
@@ -152,10 +165,10 @@ def edit_user(user_id):
     
     # Update user
     try:
-        conn.execute("""
+        cursor.execute(f"""
             UPDATE users 
-            SET email = ?, role = ?
-            WHERE id = ?
+            SET email = {ph()}, role = {ph()}
+            WHERE id = {ph()}
         """, (email, role, user_id))
         conn.commit()
         
@@ -178,7 +191,9 @@ def delete_user(user_id):
         return redirect(url_for('admin.users'))
     
     conn = get_db()
-    user = conn.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT username FROM users WHERE id = {ph()}", (user_id,))
+    user = cursor.fetchone()
     
     if not user:
         flash('ไม่พบผู้ใช้', 'danger')
@@ -186,7 +201,7 @@ def delete_user(user_id):
     
     try:
         # Delete user
-        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        cursor.execute(f"DELETE FROM users WHERE id = {ph()}", (user_id,))
         conn.commit()
         
         log_action('USER_DELETED', 'user', user_id, f'Deleted user: {user["username"]}')
@@ -213,7 +228,9 @@ def reset_password(user_id):
         return redirect(url_for('admin.users'))
     
     conn = get_db()
-    user = conn.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT username FROM users WHERE id = {ph()}", (user_id,))
+    user = cursor.fetchone()
     
     if not user:
         flash('ไม่พบผู้ใช้', 'danger')
@@ -221,10 +238,10 @@ def reset_password(user_id):
     
     try:
         hashed_password = generate_password_hash(new_password)
-        conn.execute("""
+        cursor.execute(f"""
             UPDATE users 
-            SET password = ?
-            WHERE id = ?
+            SET password = {ph()}
+            WHERE id = {ph()}
         """, (hashed_password, user_id))
         conn.commit()
         
