@@ -84,10 +84,11 @@ function initCharts() {
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['ปกติ', 'ใกล้ครบกำหนด', 'เกินกำหนด'],
+                labels: ['ทั้งหมด', 'ปกติ', 'ใกล้ครบกำหนด', 'เกินกำหนด'],
                 datasets: [{
-                    data: [onTrack, nearDeadline, overdue],
+                    data: [total, onTrack, nearDeadline, overdue],
                     backgroundColor: [
+                        '#6366f1', // Indigo - Total
                         '#10b981', // Green - On Track
                         '#f59e0b', // Amber - Near Deadline
                         '#ef4444'  // Red - Overdue
@@ -101,16 +102,12 @@ function initCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                cutout: '65%',
+                cutout: '60%',
                 animation: {
                     animateRotate: true,
                     animateScale: true
                 },
                 plugins: {
-                    centerText: {
-                        text: total.toString(),
-                        label: 'โครงการ'
-                    },
                     legend: {
                         position: 'bottom',
                         labels: {
@@ -140,9 +137,16 @@ function initCharts() {
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const statusMap = ['On Track', 'Near Deadline', 'Overdue'];
+                        const statusMap = ['', 'On Track', 'Near Deadline', 'Overdue'];
                         const status = statusMap[index];
-                        window.location.href = `/dashboard?status=${encodeURIComponent(status)}`;
+
+                        // Navigate to dashboard with status filter
+                        if (index === 0) {
+                            // All projects - no filter
+                            window.location.href = '/dashboard';
+                        } else {
+                            window.location.href = `/dashboard?status=${encodeURIComponent(status)}`;
+                        }
                     }
                 }
             }
