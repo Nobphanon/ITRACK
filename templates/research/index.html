@@ -545,11 +545,13 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link nav-link-custom" href="{{ url_for('auth.change_password') }}">
                             <i class="bi bi-key-fill me-1"></i>เปลี่ยนรหัสผ่าน
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link nav-link-custom" href="{{ url_for('research.executive_report') }}">
                             <i class="bi bi-graph-up-arrow me-1"></i>รายงาน
