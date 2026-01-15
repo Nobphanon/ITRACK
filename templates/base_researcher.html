@@ -25,6 +25,35 @@
     <nav class="navbar navbar-expand-lg navbar-itrack">
         <div class="container">
             <a class="navbar-brand navbar-brand-itrack" href="{{ url_for('researcher.dashboard') }}">ITRACK</a>
+            <!-- Notification Bell (next to logo) -->
+            <div class="dropdown me-2">
+                <a class="nav-link position-relative" href="#" id="notifDropdown" role="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-bell-fill"></i>
+                    <span
+                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                        id="notif-count" style="display:none;">
+                        0
+                    </span>
+                </a>
+                <div class="dropdown-menu notification-dropdown p-0" aria-labelledby="notifDropdown"
+                    style="width: 320px; max-height: 400px; overflow-y: auto;">
+                    <div
+                        class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                        <strong><i class="bi bi-bell me-1"></i>การแจ้งเตือน</strong>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0"
+                            id="mark-all-read-btn">อ่านทั้งหมด</button>
+                    </div>
+                    <div id="notification-list">
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-bell-slash"></i> ไม่มีการแจ้งเตือน
+                        </div>
+                    </div>
+                    <div class="dropdown-footer text-center py-2 border-top">
+                        <a href="{{ url_for('notifications.index') }}" class="text-decoration-none small">ดูทั้งหมด</a>
+                    </div>
+                </div>
+            </div>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -34,36 +63,6 @@
                         <a class="nav-link nav-link-custom active" href="{{ url_for('researcher.dashboard') }}">
                             <i class="bi bi-kanban me-1"></i>โครงการของฉัน
                         </a>
-                    </li>
-                    <!-- Notification Bell -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link position-relative" href="#" id="notifDropdown" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell-fill"></i>
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
-                                id="notif-count" style="display:none;">
-                                0
-                            </span>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end notification-dropdown p-0"
-                            aria-labelledby="notifDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
-                            <div
-                                class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
-                                <strong><i class="bi bi-bell me-1"></i>การแจ้งเตือน</strong>
-                                <button class="btn btn-sm btn-link text-decoration-none p-0"
-                                    id="mark-all-read-btn">อ่านทั้งหมด</button>
-                            </div>
-                            <div id="notification-list">
-                                <div class="text-center py-4 text-muted">
-                                    <i class="bi bi-bell-slash"></i> ไม่มีการแจ้งเตือน
-                                </div>
-                            </div>
-                            <div class="dropdown-footer text-center py-2 border-top">
-                                <a href="{{ url_for('notifications.index') }}"
-                                    class="text-decoration-none small">ดูทั้งหมด</a>
-                            </div>
-                        </div>
                     </li>
                     <li class="nav-item">
                         <button id="theme-toggle" class="btn-theme-toggle" title="เปลี่ยนโหมดสี">
