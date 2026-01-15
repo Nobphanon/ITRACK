@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import current_app
 from models import get_db
 from notifications.email_service import send_deadline_reminder, send_overdue_alert, send_assignment_email
+from notifications.notification_service import create_notification
 import logging
 
 # ตั้งค่า Logging
@@ -91,15 +92,37 @@ def notify_deadlines():
             
             # Send notifications
             if should_notify_researcher:
+                # Get researcher user ID if assigned
+                researcher_user_id = row.get('assigned_researcher_id')
+                
                 if days_left >= 0:
                     success, _ = send_deadline_reminder(
                         recipient_email, recipient_name, project_name, days_left
                     )
+                    # Create in-app notification
+                    if researcher_user_id:
+                        notif_type = 'danger' if days_left == 0 else ('warning' if days_left <= 7 else 'info')
+                        create_notification(
+                            user_id=researcher_user_id,
+                            title=f"⏰ เหลือเวลาอีก {days_left} วัน" if days_left > 0 else "🔴 ถึงกำหนดส่งวันนี้!",
+                            message=f"โครงการ: {project_name[:50]}",
+                            notif_type=notif_type,
+                            link=f"/researcher/project/{row['id']}"
+                        )
                 else:
                     success, _ = send_overdue_alert(
                         recipient_email, recipient_name, project_name, 
                         abs(days_left), is_admin=False
                     )
+                    # Create in-app notification for overdue
+                    if researcher_user_id:
+                        create_notification(
+                            user_id=researcher_user_id,
+                            title=f"❌ เลยกำหนดส่ง {abs(days_left)} วัน",
+                            message=f"โครงการ: {project_name[:50]}",
+                            notif_type='danger',
+                            link=f"/researcher/project/{row['id']}"
+                        )
                 
                 if success:
                     count_sent += 1
@@ -154,6 +177,14 @@ def send_assignment_notification(researcher_id, project_id):
             
             if success:
                 logger.info(f"✅ Assignment notification sent to {researcher['email']}")
+                # Also create in-app notification
+                create_notification(
+                    user_id=researcher_id,
+                    title="📬 ได้รับมอบหมายโครงการใหม่",
+                    message=f"โครงการ: {project['project_th'][:50] if project['project_th'] else f'Project #{project_id}'}",
+                    notif_type='info',
+                    link=f"/researcher/project/{project_id}"
+                )
                 return True
             else:
                 logger.error(f"❌ Failed to send assignment email: {error}")

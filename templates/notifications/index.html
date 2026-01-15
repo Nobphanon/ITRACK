@@ -1,0 +1,86 @@
+{% extends "base_admin.html" %}
+
+{% block title %}การแจ้งเตือน | ITRACK{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="bi bi-bell-fill me-2"></i>การแจ้งเตือนทั้งหมด
+        </h2>
+        {% if unread_count > 0 %}
+        <form action="{{ url_for('notifications.api_mark_all_read') }}" method="POST" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-check2-all me-1"></i>อ่านทั้งหมด
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if notifications %}
+    <div class="card shadow-sm">
+        <ul class="list-group list-group-flush">
+            {% for n in notifications %}
+            <li class="list-group-item notification-item {% if not n.is_read %}notification-unread{% endif %}">
+                <a href="{{ url_for('notifications.click_notification', notif_id=n.id) }}"
+                    class="text-decoration-none d-flex align-items-start">
+                    <div class="notification-icon me-3">
+                        {% if n.type == 'danger' %}
+                        <i class="bi bi-exclamation-circle-fill text-danger fs-4"></i>
+                        {% elif n.type == 'warning' %}
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                        {% elif n.type == 'success' %}
+                        <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                        {% else %}
+                        <i class="bi bi-info-circle-fill text-info fs-4"></i>
+                        {% endif %}
+                    </div>
+                    <div class="notification-content flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <strong class="notification-title">{{ n.title }}</strong>
+                            <small class="text-muted ms-2">{{ n.created_at[:16].replace('T', ' ') }}</small>
+                        </div>
+                        {% if n.message %}
+                        <p class="mb-0 text-muted small mt-1">{{ n.message }}</p>
+                        {% endif %}
+                    </div>
+                    {% if not n.is_read %}
+                    <span class="badge bg-primary ms-2">ใหม่</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bell-slash text-muted" style="font-size: 4rem;"></i>
+        <p class="text-muted mt-3 mb-0">ไม่มีการแจ้งเตือน</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .notification-item {
+        transition: background-color 0.2s;
+    }
+
+    .notification-item:hover {
+        background-color: var(--card-bg, #f8fafc);
+    }
+
+    .notification-unread {
+        background-color: #eff6ff;
+        border-left: 3px solid var(--bs-primary);
+    }
+
+    [data-theme="dark"] .notification-unread {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    .notification-item a {
+        color: inherit;
+    }
+</style>
+{% endblock %}

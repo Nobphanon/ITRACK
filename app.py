@@ -75,6 +75,10 @@ app.register_blueprint(admin_bp)
 from researcher.routes import researcher_bp
 app.register_blueprint(researcher_bp)
 
+# Notifications Blueprint
+from notifications.routes import notifications_bp
+app.register_blueprint(notifications_bp)
+
 # Database Initialization
 with app.app_context():
     init_db()

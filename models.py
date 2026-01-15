@@ -190,6 +190,37 @@ def init_db():
                 FOREIGN KEY (updated_by) REFERENCES users(id)
             )
         """)
+
+    # ---------- Notifications ----------
+    if IS_POSTGRES:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                message TEXT,
+                type TEXT DEFAULT 'info',
+                link TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+    else:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                message TEXT,
+                type TEXT DEFAULT 'info',
+                link TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
     logger.info("✅ All tables ready")
 
     # ---------- Default Admin ----------
