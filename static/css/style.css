@@ -136,6 +136,17 @@
     color: #ffffff !important;
 }
 
+/* Tables with white background in dark mode - text should be BLACK */
+[data-theme="dark"] .table-hover tbody td,
+[data-theme="dark"] .content-card .table tbody td {
+    color: #000000 !important;
+}
+
+[data-theme="dark"] .table-hover tbody td strong,
+[data-theme="dark"] .content-card .table tbody td strong {
+    color: #000000 !important;
+}
+
 [data-theme="dark"] .data-table thead th,
 [data-theme="dark"] .table thead th,
 [data-theme="dark"] thead th {
