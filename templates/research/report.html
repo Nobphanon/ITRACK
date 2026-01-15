@@ -7,7 +7,7 @@
     <title>Executive Summary | ITRACK</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -20,143 +20,217 @@
         }
 
         body {
-            background: #1e293b;
-            color: white;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
             min-height: 100vh;
         }
 
         .report-page {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 24px;
         }
 
-        /* Header */
+        /* Header - Formal Style */
         .report-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #3b82f6;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid #1e3a5f;
         }
 
         .report-header h1 {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 700;
             margin: 0;
-            color: #60a5fa;
+            color: #1e3a5f;
+        }
+
+        .report-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 4px;
         }
 
         .report-date {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: #475569;
+            font-weight: 500;
         }
 
-        /* KPI Cards */
+        /* KPI Cards - Large & Clear */
         .kpi-row {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .kpi-card {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid #475569;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .kpi-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .kpi-icon.primary {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .kpi-icon.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .kpi-icon.warning {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .kpi-icon.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .kpi-icon.info {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .kpi-content {
+            flex: 1;
         }
 
         .kpi-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
             line-height: 1;
+            color: #1e293b;
         }
 
         .kpi-label {
-            font-size: 0.7rem;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .kpi-percent {
+            font-size: 0.8rem;
             color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 5px;
-        }
-
-        .kpi-card.primary .kpi-value {
-            color: #3b82f6;
-        }
-
-        .kpi-card.success .kpi-value {
-            color: #10b981;
-        }
-
-        .kpi-card.warning .kpi-value {
-            color: #f59e0b;
-        }
-
-        .kpi-card.danger .kpi-value {
-            color: #ef4444;
-        }
-
-        .kpi-card.info .kpi-value {
-            color: #06b6d4;
+            margin-top: 2px;
         }
 
         /* Main Grid */
         .main-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .chart-box {
-            background: #334155;
-            border-radius: 10px;
-            padding: 15px;
-            border: 1px solid #475569;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .chart-box h3 {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+            margin-bottom: 16px;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        /* Key Metrics Box */
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .metric-value.primary {
+            color: #1e40af;
+        }
+
+        .metric-value.success {
+            color: #059669;
+        }
+
+        .metric-value.warning {
+            color: #d97706;
         }
 
         /* Highlights */
         .highlights {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: 16px;
         }
 
         .highlight-card {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            border-radius: 10px;
-            padding: 15px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
             border-left: 4px solid;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .highlight-card.danger {
-            border-color: #ef4444;
+            border-left-color: #dc2626;
         }
 
         .highlight-card.warning {
-            border-color: #f59e0b;
+            border-left-color: #d97706;
         }
 
         .highlight-card.success {
-            border-color: #10b981;
+            border-left-color: #059669;
         }
 
         .highlight-card h4 {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin: 0 0 8px 0;
-            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: #1e3a5f;
+            margin: 0 0 12px 0;
+            font-weight: 600;
         }
 
         .highlight-list {
@@ -167,30 +241,33 @@
 
         .highlight-list li {
             font-size: 0.8rem;
-            padding: 4px 0;
-            border-bottom: 1px solid #475569;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
             display: flex;
             justify-content: space-between;
+            color: #334155;
         }
 
         .highlight-list li:last-child {
             border: none;
         }
 
-        .progress-mini {
-            width: 40px;
-            height: 6px;
-            background: #475569;
-            border-radius: 3px;
-            overflow: hidden;
+        .text-danger {
+            color: #dc2626 !important;
+            font-weight: 600;
         }
 
-        .progress-mini-bar {
-            height: 100%;
-            border-radius: 3px;
+        .text-warning {
+            color: #d97706 !important;
+            font-weight: 600;
         }
 
-        /* Print */
+        .text-success {
+            color: #059669 !important;
+            font-weight: 600;
+        }
+
+        /* Print Styles */
         .no-print {}
 
         @media print {
@@ -200,7 +277,6 @@
 
             body {
                 background: white !important;
-                color: #1e293b !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -212,50 +288,61 @@
             .kpi-card,
             .chart-box,
             .highlight-card {
-                background: #f1f5f9 !important;
-                border-color: #e2e8f0 !important;
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
             }
 
-            .kpi-value,
-            .report-header h1 {
-                color: #1e40af !important;
-            }
-
-            .kpi-label,
-            .chart-box h3,
-            .highlight-card h4,
-            .report-date {
-                color: #64748b !important;
-            }
-
-            .highlight-list li {
-                color: #334155 !important;
+            .kpi-icon {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
 
+        /* Buttons */
         .btn-action {
-            background: #3b82f6;
+            background: #1e3a5f;
             border: none;
             color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 10px 20px;
+            border-radius: 8px;
             font-size: 0.85rem;
             cursor: pointer;
+            font-weight: 500;
         }
 
         .btn-action:hover {
-            background: #2563eb;
+            background: #0f172a;
         }
 
         .btn-outline {
             background: transparent;
-            border: 1px solid #475569;
-            color: #94a3b8;
+            border: 1px solid #cbd5e1;
+            color: #475569;
         }
 
         .btn-outline:hover {
-            background: #334155;
-            color: white;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        /* Form Select */
+        .filter-select {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            color: #94a3b8;
+            font-size: 0.75rem;
         }
     </style>
 </head>
@@ -265,86 +352,129 @@
         <!-- Header -->
         <div class="report-header">
             <div>
-                <h1><i class="bi bi-graph-up-arrow me-2"></i>ITRACK Executive Summary</h1>
-                <span class="report-date">รายงานสถานะโครงการวิจัย | {{ report_date }}
-                    {% if selected_affiliation != 'all' %} | <strong style="color:#60a5fa;">{{ selected_affiliation
+                <h1><i class="bi bi-bar-chart-line me-2"></i>ITRACK Executive Summary</h1>
+                <div class="report-subtitle">
+                    รายงานสรุปสถานะโครงการวิจัยสำหรับผู้บริหาร
+                    {% if selected_affiliation != 'all' %} | <strong style="color:#1e40af;">{{ selected_affiliation
                         }}</strong>{% endif %}
-                </span>
+                </div>
             </div>
-            <div class="no-print d-flex align-items-center gap-2">
-                <select id="affiliationFilter" class="form-select form-select-sm"
-                    style="width:auto;background:#334155;border-color:#475569;color:white;font-size:0.85rem;"
-                    onchange="window.location.href='{{ url_for('research.executive_report') }}?affiliation=' + this.value">
-                    <option value="all" {% if selected_affiliation=='all' %}selected{% endif %}>ทุกสังกัด</option>
-                    {% for aff in affiliations_list %}
-                    <option value="{{ aff }}" {% if selected_affiliation==aff %}selected{% endif %}>{{ aff }}</option>
-                    {% endfor %}
-                </select>
-                <button onclick="window.print()" class="btn-action">
-                    <i class="bi bi-printer me-1"></i>พิมพ์ PDF
-                </button>
-                <a href="{{ url_for('research.landing') }}" class="btn-action btn-outline">
-                    <i class="bi bi-arrow-left me-1"></i>กลับ
-                </a>
+            <div class="text-end">
+                <div class="report-date">
+                    <i class="bi bi-calendar3 me-1"></i>วันที่รายงาน: {{ report_date }}
+                </div>
+                <div class="no-print d-flex align-items-center gap-2 mt-2">
+                    <select id="affiliationFilter" class="filter-select"
+                        onchange="window.location.href='{{ url_for('research.executive_report') }}?affiliation=' + this.value">
+                        <option value="all" {% if selected_affiliation=='all' %}selected{% endif %}>ทุกสังกัด</option>
+                        {% for aff in affiliations_list %}
+                        <option value="{{ aff }}" {% if selected_affiliation==aff %}selected{% endif %}>{{ aff }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="window.print()" class="btn-action">
+                        <i class="bi bi-printer me-1"></i>พิมพ์ PDF
+                    </button>
+                    <a href="{{ url_for('research.landing') }}" class="btn-action btn-outline">
+                        <i class="bi bi-arrow-left me-1"></i>กลับ
+                    </a>
+                </div>
             </div>
         </div>
 
-        <!-- KPI Row -->
+        <!-- KPI Row 1: Main Counts -->
         <div class="kpi-row">
-            <div class="kpi-card primary">
-                <div class="kpi-value">{{ total }}</div>
-                <div class="kpi-label">โครงการทั้งหมด</div>
+            <div class="kpi-card">
+                <div class="kpi-icon primary">
+                    <i class="bi bi-folder2-open"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ total }}</div>
+                    <div class="kpi-label">โครงการทั้งหมด</div>
+                </div>
             </div>
-            <div class="kpi-card success">
-                <div class="kpi-value">{{ completed }}</div>
-                <div class="kpi-label">เสร็จสมบูรณ์</div>
+            <div class="kpi-card">
+                <div class="kpi-icon success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ completed }}</div>
+                    <div class="kpi-label">เสร็จสมบูรณ์</div>
+                    <div class="kpi-percent">{{ "%.0f"|format((completed / total * 100) if total > 0 else 0) }}%
+                        ของทั้งหมด</div>
+                </div>
             </div>
-            <div class="kpi-card info">
-                <div class="kpi-value">{{ in_progress }}</div>
-                <div class="kpi-label">กำลังดำเนินการ</div>
+            <div class="kpi-card">
+                <div class="kpi-icon info">
+                    <i class="bi bi-play-circle"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ in_progress }}</div>
+                    <div class="kpi-label">กำลังดำเนินการ</div>
+                    <div class="kpi-percent">{{ "%.0f"|format((in_progress / total * 100) if total > 0 else 0) }}%
+                        ของทั้งหมด</div>
+                </div>
             </div>
-            <div class="kpi-card success">
-                <div class="kpi-value">{{ on_track }}</div>
-                <div class="kpi-label">ปกติ</div>
+        </div>
+
+        <!-- KPI Row 2: Deadline Status -->
+        <div class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-icon success">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ on_track }}</div>
+                    <div class="kpi-label">สถานะปกติ</div>
+                    <div class="kpi-percent">Deadline > 7 วัน</div>
+                </div>
             </div>
-            <div class="kpi-card warning">
-                <div class="kpi-value">{{ near_deadline }}</div>
-                <div class="kpi-label">ใกล้กำหนด</div>
+            <div class="kpi-card">
+                <div class="kpi-icon warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ near_deadline }}</div>
+                    <div class="kpi-label">ใกล้ถึงกำหนด</div>
+                    <div class="kpi-percent">Deadline ≤ 7 วัน</div>
+                </div>
             </div>
-            <div class="kpi-card danger">
-                <div class="kpi-value">{{ overdue }}</div>
-                <div class="kpi-label">เลยกำหนด</div>
+            <div class="kpi-card">
+                <div class="kpi-icon danger">
+                    <i class="bi bi-x-octagon"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">{{ overdue }}</div>
+                    <div class="kpi-label">เลยกำหนดส่ง</div>
+                    <div class="kpi-percent">ต้องดำเนินการด่วน</div>
+                </div>
             </div>
         </div>
 
         <!-- Main Charts -->
         <div class="main-grid">
             <div class="chart-box">
-                <h3><i class="bi bi-pie-chart me-1"></i>สถานะ Deadline</h3>
-                <canvas id="deadlineChart" height="140"></canvas>
+                <h3><i class="bi bi-pie-chart me-2"></i>สถานะ Deadline</h3>
+                <canvas id="deadlineChart" height="160"></canvas>
             </div>
             <div class="chart-box">
-                <h3><i class="bi bi-bar-chart me-1"></i>สถานะงาน</h3>
-                <canvas id="statusChart" height="140"></canvas>
+                <h3><i class="bi bi-bar-chart me-2"></i>สถานะการดำเนินงาน</h3>
+                <canvas id="statusChart" height="160"></canvas>
             </div>
             <div class="chart-box">
-                <h3><i class="bi bi-graph-up me-1"></i>ตัวชี้วัดหลัก</h3>
-                <div style="padding: 10px 0;">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span style="color:#94a3b8;font-size:0.8rem;">ความคืบหน้าเฉลี่ย</span>
-                        <span style="color:#3b82f6;font-size:1.5rem;font-weight:700;">{{ "%.0f"|format(avg_progress)
-                            }}%</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span style="color:#94a3b8;font-size:0.8rem;">อัตราความสำเร็จ</span>
-                        <span style="color:#10b981;font-size:1.5rem;font-weight:700;">{{ "%.0f"|format((completed /
-                            total * 100) if total > 0 else 0) }}%</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span style="color:#94a3b8;font-size:0.8rem;">งบประมาณรวม</span>
-                        <span style="color:#f59e0b;font-size:1.2rem;font-weight:600;">{{ "{:,.0f}".format(total_funding)
-                            }}฿</span>
-                    </div>
+                <h3><i class="bi bi-speedometer2 me-2"></i>ตัวชี้วัดหลัก (KPIs)</h3>
+                <div class="metric-row">
+                    <span class="metric-label"><i class="bi bi-graph-up me-2"></i>ความคืบหน้าเฉลี่ย</span>
+                    <span class="metric-value primary">{{ "%.0f"|format(avg_progress) }}%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label"><i class="bi bi-trophy me-2"></i>อัตราความสำเร็จ</span>
+                    <span class="metric-value success">{{ "%.0f"|format((completed / total * 100) if total > 0 else 0)
+                        }}%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label"><i class="bi bi-cash-stack me-2"></i>งบประมาณรวม</span>
+                    <span class="metric-value warning">{{ "{:,.0f}".format(total_funding) }}฿</span>
                 </div>
             </div>
         </div>
@@ -352,7 +482,7 @@
         <!-- Highlights -->
         <div class="highlights">
             <div class="highlight-card danger">
-                <h4><i class="bi bi-exclamation-triangle me-1"></i>โครงการเลยกำหนด</h4>
+                <h4><i class="bi bi-exclamation-octagon me-2"></i>โครงการเลยกำหนด ({{ overdue }})</h4>
                 <ul class="highlight-list">
                     {% for p in project_list if p.deadline_status == 'overdue' %}
                     {% if loop.index <= 4 %} <li>
@@ -362,12 +492,14 @@
                         </li>
                         {% endif %}
                         {% else %}
-                        <li style="color:#64748b;text-align:center;">ไม่มีโครงการเลยกำหนด ✓</li>
+                        <li style="color:#059669;text-align:center;justify-content:center;">
+                            <i class="bi bi-check-circle me-1"></i>ไม่มีโครงการเลยกำหนด
+                        </li>
                         {% endfor %}
                 </ul>
             </div>
             <div class="highlight-card warning">
-                <h4><i class="bi bi-clock me-1"></i>ใกล้ถึงกำหนด (7 วัน)</h4>
+                <h4><i class="bi bi-clock-history me-2"></i>ใกล้ถึงกำหนด ({{ near_deadline }})</h4>
                 <ul class="highlight-list">
                     {% for p in project_list if p.deadline_status == 'near_deadline' %}
                     {% if loop.index <= 4 %} <li>
@@ -377,12 +509,14 @@
                         </li>
                         {% endif %}
                         {% else %}
-                        <li style="color:#64748b;text-align:center;">ไม่มีโครงการใกล้กำหนด ✓</li>
+                        <li style="color:#059669;text-align:center;justify-content:center;">
+                            <i class="bi bi-check-circle me-1"></i>ไม่มีโครงการใกล้กำหนด
+                        </li>
                         {% endfor %}
                 </ul>
             </div>
             <div class="highlight-card success">
-                <h4><i class="bi bi-trophy me-1"></i>ความคืบหน้าสูงสุด</h4>
+                <h4><i class="bi bi-trophy me-2"></i>ความคืบหน้าสูงสุด</h4>
                 <ul class="highlight-list">
                     {% for p in project_list|sort(attribute='progress_percent', reverse=true) %}
                     {% if loop.index <= 4 and p.progress_percent> 0 %}
@@ -398,12 +532,22 @@
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-3" style="color:#64748b;font-size:0.75rem;">
-            Generated by ITRACK Research Management System | {{ report_date }}
+        <div class="report-footer">
+            <strong>ITRACK</strong> Research Management System | รายงานสร้างโดยระบบอัตโนมัติ | {{ report_date }}
         </div>
     </div>
 
     <script>
+        // Professional Color Palette
+        const colors = {
+            success: '#059669',
+            warning: '#d97706',
+            danger: '#dc2626',
+            primary: '#1e40af',
+            info: '#0284c7',
+            muted: '#64748b'
+        };
+
         // Deadline Chart
         new Chart(document.getElementById('deadlineChart'), {
             type: 'doughnut',
@@ -411,13 +555,23 @@
                 labels: ['ปกติ', 'ใกล้กำหนด', 'เลยกำหนด'],
                 datasets: [{
                     data: [{{ on_track }}, {{ near_deadline }}, {{ overdue }}],
-            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-            borderWidth: 0
+            backgroundColor: [colors.success, colors.warning, colors.danger],
+            borderWidth: 2,
+            borderColor: '#ffffff'
                 }]
             },
             options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#334155',
+                        font: { size: 11, weight: '500' },
+                        padding: 12
+                    }
+                }
+            }
         }
         });
 
@@ -425,16 +579,27 @@
         new Chart(document.getElementById('statusChart'), {
             type: 'bar',
             data: {
-                labels: ['ไม่เริ่ม', 'ดำเนินการ', 'เสร็จ', 'หยุด', 'ล่าช้า'],
+                labels: ['ไม่เริ่ม', 'ดำเนินการ', 'เสร็จสิ้น', 'หยุดชั่วคราว', 'ล่าช้า'],
                 datasets: [{
                     data: [{{ progress_by_status.not_started }}, {{ progress_by_status.in_progress }}, {{ progress_by_status.completed }}, {{ progress_by_status.on_hold }}, {{ progress_by_status.delayed }}],
-            backgroundColor: ['#64748b', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
-            borderRadius: 4
+            backgroundColor: [colors.muted, colors.info, colors.success, colors.warning, colors.danger],
+            borderRadius: 6,
+            borderWidth: 0
                 }]
             },
             options: {
             responsive: true,
-            scales: { y: { beginAtZero: true, ticks: { color: '#64748b' }, grid: { color: '#475569' } }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#64748b', font: { size: 10 } },
+                    grid: { color: '#e2e8f0' }
+                },
+                x: {
+                    ticks: { color: '#334155', font: { size: 10, weight: '500' } },
+                    grid: { display: false }
+                }
+            },
             plugins: { legend: { display: false } }
         }
         });
