@@ -233,3 +233,90 @@ def init_db():
         logger.info(f"✅ Created default researcher user with email: {researcher_email}")
 
     conn.commit()
+    
+    # Create indexes for better query performance
+    create_indexes(conn, cursor)
+
+
+def create_indexes(conn, cursor):
+    """
+    Create database indexes for frequently queried columns.
+    This significantly improves query performance for large datasets.
+    """
+    try:
+        if IS_POSTGRES:
+            # PostgreSQL indexes - use CREATE INDEX IF NOT EXISTS
+            indexes = [
+                "CREATE INDEX IF NOT EXISTS idx_projects_deadline ON research_projects(deadline)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_affiliation ON research_projects(affiliation)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_status ON research_projects(status)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_researcher ON research_projects(assigned_researcher_id)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_start_date ON research_projects(start_date)",
+                "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+                "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+                "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)",
+                "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)",
+            ]
+        else:
+            # SQLite indexes
+            indexes = [
+                "CREATE INDEX IF NOT EXISTS idx_projects_deadline ON research_projects(deadline)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_affiliation ON research_projects(affiliation)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_status ON research_projects(status)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_researcher ON research_projects(assigned_researcher_id)",
+                "CREATE INDEX IF NOT EXISTS idx_projects_start_date ON research_projects(start_date)",
+                "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+                "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+                "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)",
+                "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)",
+            ]
+        
+        for idx_sql in indexes:
+            try:
+                cursor.execute(idx_sql)
+            except Exception as e:
+                # Index might already exist with different name
+                logger.debug(f"Index creation skipped: {e}")
+        
+        conn.commit()
+        logger.info("✅ Database indexes created/verified")
+    except Exception as e:
+        logger.error(f"⚠️ Error creating indexes: {e}")
+
+
+def parse_date_fast(date_str):
+    """
+    Fast date parsing without pandas overhead.
+    Returns datetime.date or None.
+    """
+    if not date_str or date_str == '':
+        return None
+    try:
+        # Handle common format: YYYY-MM-DD
+        if len(date_str) >= 10:
+            return datetime.strptime(date_str[:10], '%Y-%m-%d').date()
+        return None
+    except (ValueError, TypeError):
+        return None
+
+
+def calculate_deadline_status(deadline_str, today=None):
+    """
+    Calculate deadline status efficiently without pandas.
+    Returns: (days_left, status_text)
+    """
+    if today is None:
+        today = datetime.today().date()
+    
+    deadline_date = parse_date_fast(deadline_str)
+    if not deadline_date:
+        return None, 'no_deadline'
+    
+    days_left = (deadline_date - today).days
+    
+    if days_left < 0:
+        return days_left, 'overdue'
+    elif days_left <= 7:
+        return days_left, 'near_deadline'
+    else:
+        return days_left, 'on_track'

@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
-from models import get_db
+from models import get_db, calculate_deadline_status, parse_date_fast
 from database import IS_POSTGRES
 from services.excel_service import get_smart_df
 
@@ -110,28 +110,22 @@ def landing():
     
     project_list = []
     
+    # ⚡ OPTIMIZED: Use fast date parsing instead of pandas
     for row in projects:
-        # Calculate deadline status
-        deadline_status = 'no_deadline'
-        days_left = None
+        # Calculate deadline status using optimized function
+        days_left, deadline_status = calculate_deadline_status(row['deadline'], today)
         
-        if row['deadline']:
-            dt = pd.to_datetime(row['deadline'], errors="coerce")
-            if not pd.isna(dt):
-                days_left = (dt.date() - today).days
-                
-                if days_left < 0:
-                    overdue += 1
-                    deadline_status = 'overdue'
-                elif days_left <= 7:
-                    near_deadline += 1
-                    deadline_status = 'near_deadline'
-                else:
-                    on_track += 1
-                    deadline_status = 'on_track'
-                
-                if days_left >= 0:
-                    next_deadline = days_left if next_deadline is None else min(next_deadline, days_left)
+        # Count deadline statuses
+        if deadline_status == 'overdue':
+            overdue += 1
+        elif deadline_status == 'near_deadline':
+            near_deadline += 1
+        elif deadline_status == 'on_track':
+            on_track += 1
+        
+        # Track next deadline
+        if days_left is not None and days_left >= 0:
+            next_deadline = days_left if next_deadline is None else min(next_deadline, days_left)
         
         # Count by status
         status = row['status'] or 'draft'
@@ -449,25 +443,24 @@ def dashboard():
     for r in rows:
         p = dict(r)
         
-        # Calculate Status
-        dt = pd.to_datetime(p['deadline'], errors="coerce")
-        days_left = None
-        status_text = "Unknown"
+        # ⚡ OPTIMIZED: Calculate Status using fast function
+        days_left, deadline_status = calculate_deadline_status(p['deadline'], today)
         
-        if not pd.isna(dt):
-            days_left = (dt.date() - today).days
-            if days_left < 0:
-                status_text = "Overdue"
-            elif days_left <= 7:
-                status_text = "Near Deadline"
-            else:
-                status_text = "On Track"
+        # Map to display text
+        status_map = {
+            'overdue': 'Overdue',
+            'near_deadline': 'Near Deadline',
+            'on_track': 'On Track',
+            'no_deadline': 'Unknown'
+        }
+        status_text = status_map.get(deadline_status, 'Unknown')
         
         # Status Filter
         if status and status != status_text:
             continue
             
         p['status_text'] = status_text
+        p['days_left'] = days_left
         projects.append(p)
 
     return render_template("research/dashboard.html",
