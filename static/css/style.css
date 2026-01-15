@@ -1279,3 +1279,444 @@ body {
 .fw-bold.text-white {
     color: var(--text-primary) !important;
 }
+
+/* ============================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (max-width: 992px) */
+@media (max-width: 992px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-card .stat-value,
+    .summary-card-itrack .card-value {
+        font-size: 1.75rem;
+    }
+}
+
+/* Mobile Tablet (max-width: 768px) */
+@media (max-width: 768px) {
+
+    /* Navbar */
+    .navbar-itrack {
+        padding: 0.5rem 0;
+    }
+
+    .navbar-brand-itrack {
+        font-size: 1.25rem;
+    }
+
+    .user-badge {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .user-badge .badge {
+        display: none;
+    }
+
+    .btn-theme-toggle {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    /* Summary Grid */
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    /* Stat Cards */
+    .stat-card,
+    .summary-card-itrack {
+        padding: 1rem;
+    }
+
+    .stat-card .stat-value,
+    .summary-card-itrack .card-value {
+        font-size: 1.5rem;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.65rem;
+    }
+
+    /* Tables - Horizontal Scroll */
+    .table-responsive-wrapper,
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -1rem;
+        padding: 0 1rem;
+    }
+
+    .data-table,
+    .table {
+        min-width: 800px;
+        font-size: 0.85rem;
+    }
+
+    .data-table th,
+    .data-table td,
+    .table th,
+    .table td {
+        padding: 0.6rem 0.5rem;
+    }
+
+    /* Action Buttons */
+    .btn-action {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Cards */
+    .content-card .card-header,
+    .content-card .card-body {
+        padding: 0.875rem;
+    }
+
+    /* Modals */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .modal-content {
+        border-radius: var(--radius-lg);
+    }
+
+    /* Forms */
+    .form-control-itrack,
+    .form-control-filter,
+    .form-select-itrack,
+    .form-select-filter,
+    .form-control,
+    .form-select {
+        font-size: 16px;
+        /* Prevent iOS zoom */
+        padding: 12px 14px;
+    }
+
+    /* Buttons */
+    .btn-gradient,
+    .btn-itrack,
+    .btn-primary-itrack {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 0.95rem;
+    }
+
+    .btn-outline-light-custom,
+    .btn-outline-custom {
+        width: 100%;
+        padding: 12px 16px;
+    }
+
+    /* Filter Section */
+    .filter-section .row>[class*="col-"] {
+        margin-bottom: 0.75rem;
+    }
+
+    /* Chart Container */
+    .chart-container,
+    [class*="chart"] {
+        height: 250px !important;
+        min-height: 200px;
+    }
+
+    /* Page Header */
+    .page-header,
+    h1,
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3,
+    h4 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Phone (max-width: 576px) */
+@media (max-width: 576px) {
+
+    /* Container */
+    .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    /* Summary Grid - Single Column */
+    .summary-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    /* Stat Cards - Compact */
+    .stat-card,
+    .summary-card-itrack {
+        padding: 0.875rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-card .stat-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .stat-card .stat-value,
+    .summary-card-itrack .card-value {
+        font-size: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.7rem;
+    }
+
+    /* Navbar - Compact */
+    .navbar-nav {
+        padding: 0.5rem 0;
+    }
+
+    .navbar-nav .nav-item {
+        margin-bottom: 0.25rem;
+    }
+
+    .nav-link-custom {
+        padding: 0.75rem 1rem !important;
+        border-radius: var(--radius-sm);
+    }
+
+    .user-badge {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .user-badge .badge {
+        display: inline-block;
+    }
+
+    /* Hide non-essential text */
+    .hide-mobile-text,
+    .d-none-mobile {
+        display: none !important;
+    }
+
+    /* Tables */
+    .data-table,
+    .table {
+        min-width: 700px;
+        font-size: 0.8rem;
+    }
+
+    .data-table th,
+    .data-table td,
+    .table th,
+    .table td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    /* Project Titles */
+    .project-title-th {
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Buttons */
+    .btn-action {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+
+    .btn-sm-mobile {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    /* Filter Row */
+    .filter-row,
+    .filter-section {
+        flex-direction: column;
+    }
+
+    .filter-row>*,
+    .filter-section>* {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Cards */
+    .content-card .card-header,
+    .content-card .card-body {
+        padding: 0.75rem;
+    }
+
+    .content-card .card-header h6 {
+        font-size: 0.95rem;
+    }
+
+    /* Modals */
+    .modal-dialog {
+        margin: 0.25rem;
+        max-width: calc(100% - 0.5rem);
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Charts - Smaller on Phone */
+    .chart-container,
+    [class*="chart"] {
+        height: 200px !important;
+    }
+
+    /* Status Badges */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Alert */
+    .alert {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    /* Flash Messages */
+    .container.mt-3 {
+        margin-top: 0.5rem !important;
+    }
+
+    /* Login Page */
+    .auth-container,
+    .login-container {
+        padding: 1rem;
+    }
+
+    .auth-card,
+    .login-card {
+        padding: 1.5rem;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+
+    /* Larger touch targets */
+    .btn-action {
+        width: 40px;
+        height: 40px;
+    }
+
+    .nav-link-custom {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .btn-theme-toggle {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Remove hover effects that don't work on touch */
+    .stat-card:hover,
+    .summary-card-itrack:hover {
+        transform: none;
+    }
+
+    .btn-action:hover {
+        transform: none;
+    }
+}
+
+/* Landscape Phone */
+@media (max-width: 812px) and (orientation: landscape) {
+    .summary-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .stat-card,
+    .summary-card-itrack {
+        padding: 0.75rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.25rem;
+    }
+}
+
+/* Print Styles (for reports) */
+@media print {
+
+    .navbar-itrack,
+    .btn-theme-toggle,
+    .btn-action,
+    .modal,
+    .filter-section {
+        display: none !important;
+    }
+
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+}
+
+/* Utility Classes for Responsive */
+.d-mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .d-mobile-only {
+        display: block !important;
+    }
+
+    .d-desktop-only {
+        display: none !important;
+    }
+}
+
+.text-truncate-mobile {
+    max-width: 100%;
+}
+
+@media (max-width: 576px) {
+    .text-truncate-mobile {
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
